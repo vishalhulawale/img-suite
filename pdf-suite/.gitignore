@@ -1,0 +1,34 @@
+# ─── Python / Backend ────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+backend/venv/
+.env
+.venv
+
+# ─── Node / Frontend ────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ─── IDE ─────────────────────────────────────────
+.vscode/*
+!.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+
+# ─── OS ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Temp / Runtime ──────────────────────────────
+*.log
+*.tmp
+*.bak

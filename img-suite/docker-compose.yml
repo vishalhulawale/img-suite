@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: img-suite-backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - tmp_data:/tmp/img_suite_temp
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: img-suite-frontend
+    restart: unless-stopped
+    ports:
+      - "3080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  tmp_data:
+    driver: local

@@ -1,0 +1,235 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Inter fallback: matches Inter metrics to reduce CLS during font swap ── */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  size-adjust: 107%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+/* ── Cookie-consent slide-up animation ── */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(1rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', 'Inter Fallback', system-ui, sans-serif;
+    color: #1e293b;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* ── Flat light background for all pages ── */
+    background: #F8FAFC;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar — thin & elegant */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d4d8e0;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+}
+
+@layer components {
+  /* ── Sidebar ─────────────────────────────── */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative;
+  }
+
+  .sidebar-link:hover {
+    @apply text-gray-900;
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.02);
+  }
+
+  .sidebar-link.active {
+    @apply text-primary-600 font-semibold;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 6px 16px rgba(0,0,0,0.03);
+  }
+
+  .sidebar-link.active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary-600 rounded-r-full;
+  }
+
+  /* ── Cards ───────────────────────────────── */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-hover:hover {
+    @apply -translate-y-1.5;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  /* ── Glass morphism ─────────────────────── */
+  .glass {
+    @apply backdrop-blur-2xl;
+    background: rgba(255, 255, 255, 0.6);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.45);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  }
+
+  /* ── Content area background ─────────────── */
+  .main-content {
+    position: relative;
+    background: #F8FAFC;
+  }
+
+  /* ── Home page gradient background ───────── */
+  .main-content.home-gradient {
+    background:
+      /* Purple glow — top-left */
+      radial-gradient(ellipse 70% 60% at 10% 15%, rgba(124, 58, 237, 0.14) 0%, transparent 70%),
+      /* Blue glow — bottom-right */
+      radial-gradient(ellipse 65% 55% at 85% 80%, rgba(37, 99, 235, 0.13) 0%, transparent 70%),
+      /* Subtle warm glow — center-right (depth) */
+      radial-gradient(ellipse 50% 50% at 70% 40%, rgba(167, 139, 250, 0.06) 0%, transparent 60%),
+      /* White fog/haze overlay — center */
+      radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255, 255, 255, 0.65) 0%, transparent 70%),
+      /* Base gradient */
+      linear-gradient(
+        135deg,
+        #EEF2FF 0%,
+        #F3F0FF 30%,
+        #EDE9FE 55%,
+        #F8FAFC 100%
+      );
+  }
+
+  /* Subtle grain/noise overlay for realism (home only) */
+  .main-content.home-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.3;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    z-index: 0;
+    mix-blend-mode: overlay;
+  }
+
+  /* Ensure actual content sits above the noise layer */
+  .main-content.home-gradient > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Gradient text ──────────────────────── */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  }
+
+  /* ── Page entrance ──────────────────────── */
+  .page-enter {
+    animation: pageEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes pageEnter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Button styles ─────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-xl transition-all duration-200;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.3), 0 4px 12px rgba(37, 99, 235, 0.15);
+  }
+
+  .btn-primary:hover {
+    @apply bg-primary-700;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3), 0 8px 20px rgba(37, 99, 235, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.3);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-gray-700 text-sm font-semibold rounded-xl border border-gray-200 transition-all duration-200;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  .btn-secondary:hover {
+    @apply bg-gray-50 border-gray-300 text-gray-900;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+  }
+
+  /* ── Footer link hover ─────────────────── */
+  .footer-link {
+    @apply text-gray-500 hover:text-primary-600 transition-colors duration-200;
+  }
+
+}
+
+@layer utilities {
+  /* Signature canvas */
+  .sig-canvas {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    cursor: crosshair;
+  }
+  .sig-canvas:hover {
+    border-color: #2563eb;
+  }
+
+  /* Stagger animation delays */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.3s; }
+  .stagger-7 { animation-delay: 0.35s; }
+  .stagger-8 { animation-delay: 0.4s; }
+
+  /* Fill mode for stagger items */
+  .fill-both {
+    animation-fill-mode: both;
+  }
+
+  /* ── Below-the-fold optimisation ────────── */
+  /* Skip layout/paint for off-screen sections; the browser will render them
+     just-in-time as the user scrolls, cutting initial render work on mobile. */
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;   /* placeholder height while off-screen */
+  }
+}

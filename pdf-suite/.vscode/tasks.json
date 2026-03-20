@@ -1,0 +1,34 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Backend: Start API Server",
+			"type": "shell",
+			"command": "cd c:/Workspace/pdf-suite/backend && ./venv/Scripts/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+			"isBackground": true,
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Frontend: Start Dev Server",
+			"type": "shell",
+			"command": "cd c:/Workspace/pdf-suite/frontend && npm run dev",
+			"isBackground": true,
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Start All (Frontend + Backend)",
+			"dependsOn": [
+				"Backend: Start API Server",
+				"Frontend: Start Dev Server"
+			],
+			"dependsOrder": "parallel",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		}
+	]
+}

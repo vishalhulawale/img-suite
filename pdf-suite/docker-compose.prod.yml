@@ -1,0 +1,56 @@
+# Production compose file — uses pre-built images from GHCR.
+# Images are set via environment variables by the CI/CD pipeline.
+#
+# Usage:
+#   BACKEND_IMAGE=ghcr.io/owner/repo/backend:latest \
+#   FRONTEND_IMAGE=ghcr.io/owner/repo/frontend:latest \
+#   docker compose up -d
+
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
+    container_name: pdf-suite-backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - tmp_data:/tmp/pdf_suite_temp
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
+    container_name: pdf-suite-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: pdf-suite-certbot
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renew certificates every 12 hours (certbot only renews if due)
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 43200; done'
+
+volumes:
+  tmp_data:
+    driver: local
+  certbot_conf:
+    driver: local
+  certbot_www:
+    driver: local
