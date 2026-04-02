@@ -57,19 +57,19 @@ export default function FileDropzone({
         {...getRootProps()}
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
           isDragActive
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-gray-50'
+            ? 'border-green-500 bg-green-50'
+            : 'border-gray-300 bg-white hover:border-green-400 hover:bg-gray-50'
         }`}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center gap-3">
           <div
             className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
-              isDragActive ? 'bg-blue-100' : 'bg-gray-100'
+              isDragActive ? 'bg-green-100' : 'bg-gray-100'
             }`}
           >
             <Upload
-              className={`w-7 h-7 ${isDragActive ? 'text-blue-600' : 'text-gray-400'}`}
+              className={`w-7 h-7 ${isDragActive ? 'text-green-600' : 'text-gray-400'}`}
             />
           </div>
           <div>
@@ -86,8 +86,8 @@ export default function FileDropzone({
               key={`${file.name}-${index}`}
               className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 animate-fade-in"
             >
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                <ImageIcon className="w-5 h-5 text-blue-500" />
+              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                <ImageIcon className="w-5 h-5 text-green-500" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>

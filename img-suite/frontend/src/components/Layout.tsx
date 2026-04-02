@@ -6,6 +6,7 @@ import {
   Scissors,
   Camera,
   Search,
+  ChevronRight,
   Menu,
   X,
   RefreshCw,
@@ -19,8 +20,8 @@ import {
 import { useState, useRef, useEffect } from 'react';
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Home', icon: Home, color: 'text-blue-500' },
-  { path: '/compress', label: 'Compress', icon: Minimize2, color: 'text-green-500' },
+  { path: '/', label: 'Home', icon: Home, color: 'text-green-500' },
+  { path: '/compress', label: 'Compress', icon: Minimize2, color: 'text-emerald-500' },
   { path: '/remove-background', label: 'Remove BG', icon: Scissors, color: 'text-purple-500' },
   { path: '/passport-photo', label: 'Passport Photo', icon: Camera, color: 'text-pink-500' },
   { path: '/format-converter', label: 'Format Converter', icon: RefreshCw, color: 'text-teal-500' },
@@ -35,20 +36,23 @@ const NAV_ITEMS = [
 const FOOTER_TOOLS = [
   { path: '/compress', label: 'Compress Images' },
   { path: '/remove-background', label: 'Remove Background' },
-  { path: '/passport-photo', label: 'Passport Photo' },
   { path: '/format-converter', label: 'Format Converter' },
   { path: '/crop-resize', label: 'Crop & Resize' },
-  { path: '/auto-enhance', label: 'Auto Enhance' },
-  { path: '/upscale', label: 'Image Upscaler' },
-  { path: '/watermark', label: 'Watermark Studio' },
-  { path: '/text-on-image', label: 'Text on Image' },
-  { path: '/profile-picture', label: 'Profile Picture' },
 ];
 
 const FOOTER_COMPANY = [
   { path: '/', label: 'Home' },
+  { path: '/about', label: 'About' },
+  { path: '/contact', label: 'Contact' },
 ];
 
+const FOOTER_RESOURCES = [
+  { path: '/help-center', label: 'Help Center' },
+  { path: '/blog', label: 'Blog' },
+  { path: '/privacy', label: 'Privacy Policy' },
+];
+
+// Simple search filter for tools
 function useToolSearch(query: string) {
   const allTools = NAV_ITEMS.slice(1);
   if (!query.trim()) return [];
@@ -124,6 +128,7 @@ export default function Layout() {
               <span className="text-lg font-bold text-gray-900 hidden sm:block tracking-tight">
                 Smart<span className="gradient-text">ImageSuite</span>
               </span>
+              <span className="sr-only">Home</span>
             </Link>
           </div>
 
@@ -196,8 +201,7 @@ export default function Layout() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`sidebar-link animate-fade-up fill-both ${isActive ? 'active' : 'text-gray-500'}`}
-                  style={{ animationDelay: `${(i + 1) * 0.04}s` }}
+                  className={`sidebar-link animate-fade-up fill-both stagger-${i + 1} ${isActive ? 'active' : 'text-gray-500'}`}
                 >
                   <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${item.color} ${isActive ? '' : 'group-hover:opacity-80 opacity-80'}`} />
                   <span>{item.label}</span>
@@ -211,71 +215,105 @@ export default function Layout() {
 
           <div className="p-4 border-t border-gray-200/50">
             <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-secondary-600 rounded-2xl p-4">
-              <div className="relative z-10">
-                <p className="text-white/90 text-xs font-medium mb-1">Smart Image Suite</p>
-                <p className="text-white/60 text-[11px] leading-relaxed">
-                  10+ free image tools — compress, convert, crop, enhance, watermark, and more.
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-12 h-12 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+              <div className="relative">
+                <p className="text-xs text-white/70 leading-relaxed mb-3">
+                  Smarter image tools for everyone. Fast, secure, and free.
                 </p>
+                <Link
+                  to="/compress"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-white hover:gap-2 transition-all duration-200"
+                >
+                  Get started <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             </div>
           </div>
         </aside>
 
-        {/* Main content */}
-        <main
-          id="main-content"
-          className={`flex-1 min-w-0 main-content ${isHomePage ? 'home-gradient' : ''} page-enter`}
-        >
-          <Outlet />
+        {/* Main content area */}
+        <main id="main-content" role="main" className={`flex-1 min-w-0 flex flex-col main-content${isHomePage ? ' home-gradient' : ''}`}>
+          <div className="page-enter flex-1">
+            <Outlet />
+          </div>
 
-          {/* Footer */}
-          <footer className="border-t border-gray-200/60 bg-white/40 mt-16">
-            <div className="max-w-6xl mx-auto px-6 lg:px-10 py-12">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-                {/* Brand */}
-                <div>
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-lg flex items-center justify-center">
-                      <ImageIcon className="w-4 h-4 text-white" />
+          {/* ── Footer ────────────────────────────── */}
+          <footer className="cv-auto bg-white/50 backdrop-blur-xl border-t border-white/40 mt-auto" role="contentinfo">
+            <div className="max-w-6xl mx-auto px-6 lg:px-10 py-16">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-10">
+                {/* Brand column */}
+                <div className="lg:col-span-2">
+                  <Link to="/" className="flex items-center gap-2.5 mb-5 group">
+                    <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center shadow-md shadow-primary-600/20">
+                      <ImageIcon className="w-5 h-5 text-white" width={20} height={20} />
                     </div>
-                    <span className="font-bold text-gray-900">
+                    <span className="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
                       Smart<span className="gradient-text">ImageSuite</span>
                     </span>
-                  </div>
-                  <p className="text-sm text-gray-500 leading-relaxed">
-                    Free online image tools. Process locally, your files stay private.
+                  </Link>
+                  <p className="text-sm text-gray-500 leading-relaxed max-w-xs mb-6">
+                    Smarter image tools for everyone. Compress, convert, crop, and enhance your images with ease — completely free.
                   </p>
                 </div>
 
-                {/* Tools */}
+                {/* Company column */}
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Tools</h4>
-                  <ul className="space-y-2">
-                    {FOOTER_TOOLS.map((item) => (
-                      <li key={item.path}>
-                        <Link to={item.path} className="footer-link text-sm">{item.label}</Link>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4">Company</h4>
+                  <ul className="space-y-3">
+                    {FOOTER_COMPANY.map((item) => (
+                      <li key={item.path + item.label}>
+                        <Link to={item.path} className="footer-link text-sm">
+                          {item.label}
+                        </Link>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                {/* Company */}
+                {/* Tools column */}
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Company</h4>
-                  <ul className="space-y-2">
-                    {FOOTER_COMPANY.map((item) => (
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4">Tools</h4>
+                  <ul className="space-y-3">
+                    {FOOTER_TOOLS.map((item) => (
                       <li key={item.path}>
-                        <Link to={item.path} className="footer-link text-sm">{item.label}</Link>
+                        <Link to={item.path} className="footer-link text-sm">
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Resources column */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4">Resources</h4>
+                  <ul className="space-y-3">
+                    {FOOTER_RESOURCES.map((item) => (
+                      <li key={item.path + item.label}>
+                        <Link to={item.path} className="footer-link text-sm">
+                          {item.label}
+                        </Link>
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
 
-              <div className="mt-10 pt-6 border-t border-gray-200/60 text-center">
-                <p className="text-xs text-gray-400">
-                  © {new Date().getFullYear()} SmartImageSuite. All rights reserved.
+              {/* Bottom bar */}
+              <div className="mt-14 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-sm text-gray-400">
+                  © 2026 SmartImageSuite. All rights reserved.
                 </p>
+                <div className="flex items-center gap-5 text-sm">
+                  <Link to="/terms" className="text-gray-400 hover:text-primary-600 transition-colors">
+                    Terms of Service
+                  </Link>
+                  <span className="text-gray-200">|</span>
+                  <Link to="/privacy" className="text-gray-400 hover:text-primary-600 transition-colors">
+                    Privacy Policy
+                  </Link>
+                </div>
               </div>
             </div>
           </footer>

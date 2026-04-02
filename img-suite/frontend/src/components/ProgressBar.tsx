@@ -11,7 +11,7 @@ export default function ProgressBar({ progress, status, message, processingMessa
   if (status === 'idle') return null;
 
   const colors = {
-    uploading: 'bg-blue-500',
+    uploading: 'bg-green-500',
     processing: 'bg-amber-500',
     done: 'bg-green-500',
     error: 'bg-red-500',
@@ -23,7 +23,7 @@ export default function ProgressBar({ progress, status, message, processingMessa
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2">
           {(status === 'uploading' || status === 'processing') && (
-            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+            <Loader2 className="w-4 h-4 animate-spin text-green-600" />
           )}
           <span className="font-medium text-gray-700">
             {status === 'uploading' && 'Uploading…'}

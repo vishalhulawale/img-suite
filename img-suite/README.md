@@ -23,7 +23,7 @@ Free online image tools — compress images, remove backgrounds, and create pass
 **Backend:**
 
 ```bash
-cd img-suite/backend
+cd backend
 python -m venv venv
 source venv/Scripts/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -33,7 +33,7 @@ uvicorn app.main:app --reload --port 8000
 **Frontend:**
 
 ```bash
-cd img-suite/frontend
+cd frontend
 npm install
 npm run dev
 ```
