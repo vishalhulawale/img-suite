@@ -1,6 +1,7 @@
 """Profile picture maker endpoint — platform-specific avatar crops."""
 
 import io
+import logging
 import os
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse

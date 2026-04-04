@@ -1,8 +1,9 @@
 """Text on image endpoint — add styled text layers to images."""
 
 import io
-import os
 import json
+import logging
+import os
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
 from PIL import Image, ImageDraw, ImageFont

@@ -1,8 +1,9 @@
 """Watermark studio endpoint — text or image watermarks."""
 
 import io
-import os
+import logging
 import math
+import os
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
