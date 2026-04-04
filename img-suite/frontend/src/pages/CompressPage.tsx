@@ -6,7 +6,7 @@ import ImagePreview from '../components/ImagePreview';
 import { compressImage, downloadBlob, CompressResult } from '../api';
 import SEOHead from '../components/SEOHead';
 
-type Level = 'low' | 'medium' | 'high';
+type Level = 'low' | 'medium' | 'high' | 'custom';
 
 export default function CompressPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -66,6 +66,7 @@ export default function CompressPage() {
     { value: 'low', label: 'Low', desc: 'High quality, slight compression' },
     { value: 'medium', label: 'Medium', desc: 'Balanced quality & size' },
     { value: 'high', label: 'High', desc: 'Max compression, lower quality' },
+    { value: 'custom', label: 'Custom', desc: 'Specify a target file size' },
   ];
 
   return (
@@ -88,13 +89,13 @@ export default function CompressPage() {
         onFilesChange={handleFilesChange}
         multiple={false}
         label="Drop an image file here"
-        description="Upload an image to compress (PNG, JPG, WebP)"
+        description="Upload an image to compress (PNG, JPG, WebP, AVIF)"
       />
 
       {files.length > 0 && (
         <div className="mt-8 animate-fade-in">
           <label className="block text-sm font-medium text-gray-700 mb-3">Compression Level</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {levels.map((l) => (
               <button
                 key={l.value}
@@ -113,25 +114,27 @@ export default function CompressPage() {
             ))}
           </div>
 
-          {/* Target size */}
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Target Size (optional)
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="10"
-                max="10000"
-                placeholder="e.g. 500"
-                value={targetSizeKb}
-                onChange={(e) => setTargetSizeKb(e.target.value)}
-                className="w-40 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-400"
-              />
-              <span className="text-sm text-gray-500">KB</span>
+          {/* Target size input — only when Custom is selected */}
+          {level === 'custom' && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Target Size (KB)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="10"
+                  max="10000"
+                  placeholder="e.g. 500"
+                  value={targetSizeKb}
+                  onChange={(e) => setTargetSizeKb(e.target.value)}
+                  className="w-40 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-400"
+                />
+                <span className="text-sm text-gray-500">KB</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">The image will be compressed as close to this size as possible.</p>
             </div>
-            <p className="text-xs text-gray-400 mt-1">Leave empty to use the compression level only.</p>
-          </div>
+          )}
         </div>
       )}
 

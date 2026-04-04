@@ -8,8 +8,8 @@ from fastapi import UploadFile, HTTPException
 
 TEMP_DIR = os.path.join(tempfile.gettempdir(), "img_suite_temp")
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB per file
-ALLOWED_IMAGE_MIME = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
-ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+ALLOWED_IMAGE_MIME = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/avif"}
+ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".avif"}
 
 
 def get_temp_path(ext: str = ".png") -> str:
@@ -29,7 +29,7 @@ async def save_upload(upload: UploadFile, allowed_mimes: set = None) -> str:
     if content_type not in allowed_mimes and ext not in ALLOWED_IMAGE_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type: {content_type}. Expected image file (PNG, JPG, JPEG, WebP).",
+            detail=f"Invalid file type: {content_type}. Expected image file (PNG, JPG, JPEG, WebP, AVIF).",
         )
 
     data = await upload.read()

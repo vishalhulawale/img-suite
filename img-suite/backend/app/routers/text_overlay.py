@@ -170,6 +170,8 @@ async def text_overlay(
         out_format, media_type, ext = "PNG", "image/png", ".png"
     elif original_ext == ".webp":
         out_format, media_type, ext = "WEBP", "image/webp", ".webp"
+    elif original_ext == ".avif":
+        out_format, media_type, ext = "AVIF", "image/avif", ".avif"
     else:
         out_format, media_type, ext = "JPEG", "image/jpeg", ".jpg"
         img = img.convert("RGB")
@@ -178,6 +180,8 @@ async def text_overlay(
     save_kwargs = {"format": out_format, "optimize": True}
     if out_format in ("JPEG", "WEBP"):
         save_kwargs["quality"] = 95
+    elif out_format == "AVIF":
+        save_kwargs = {"format": "AVIF", "quality": 80}
     img.save(buf, **save_kwargs)
     buf.seek(0)
 

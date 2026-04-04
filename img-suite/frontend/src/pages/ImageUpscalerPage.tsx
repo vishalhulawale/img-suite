@@ -82,8 +82,9 @@ export default function ImageUpscalerPage() {
       <div className="mb-6 p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-indigo-700 flex items-start gap-2">
         <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
         <span>
-          This tool uses high-quality resampling with smart sharpening. It works best on images that are slightly too small. 
-          Very tiny images (under 100px) will show some softness — that's a physical limitation, not a bug.
+          This tool uses FSRCNN neural super-resolution to genuinely enhance detail when upscaling.
+          If the AI model is unavailable it falls back to high-quality Lanczos resampling with smart sharpening.
+          Very tiny images (under 100px) may still show some softness.
         </span>
       </div>
 
@@ -92,7 +93,7 @@ export default function ImageUpscalerPage() {
         onFilesChange={handleFilesChange}
         multiple={false}
         label="Drop an image to upscale"
-        description="Upload an image to enlarge (PNG, JPG, WebP)"
+        description="Upload an image to enlarge (PNG, JPG, WebP, AVIF)"
       />
 
       {files.length > 0 && (

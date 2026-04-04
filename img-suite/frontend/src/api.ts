@@ -34,7 +34,7 @@ export interface CompressResult {
 
 export async function compressImage(
   file: File,
-  level: 'low' | 'medium' | 'high',
+  level: 'low' | 'medium' | 'high' | 'custom',
   targetSizeKb: number | null,
   onProgress?: (pct: number, phase: 'uploading' | 'processing') => void,
 ): Promise<CompressResult> {

@@ -1,30 +1,40 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Download, Crop, Move } from 'lucide-react';
+import { Download, Crop } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import ProgressBar from '../components/ProgressBar';
 import ImagePreview from '../components/ImagePreview';
 import { cropResizeImage, downloadBlob, CropResizeResult } from '../api';
 import SEOHead from '../components/SEOHead';
 
-const ASPECT_RATIOS = [
-  { label: 'Freeform', value: null },
-  { label: '1:1', value: 1 },
-  { label: '4:3', value: 4 / 3 },
-  { label: '3:2', value: 3 / 2 },
-  { label: '16:9', value: 16 / 9 },
-  { label: '9:16', value: 9 / 16 },
-  { label: '3:4', value: 3 / 4 },
-  { label: '2:3', value: 2 / 3 },
+type HandleDir = 'move' | 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se';
+
+const CROP_MODES: { label: string; ratio: number | null; sub?: string }[] = [
+  { label: 'Freeform', ratio: null },
+  { label: '1:1', ratio: 1 },
+  { label: '4:3', ratio: 4 / 3 },
+  { label: '3:2', ratio: 3 / 2 },
+  { label: '16:9', ratio: 16 / 9 },
+  { label: '9:16', ratio: 9 / 16 },
+  { label: '3:4', ratio: 3 / 4 },
+  { label: '2:3', ratio: 2 / 3 },
+  { label: 'Instagram Post', ratio: 1, sub: '1080×1080' },
+  { label: 'Instagram Story', ratio: 9 / 16, sub: '1080×1920' },
+  { label: 'Facebook Cover', ratio: 820 / 312, sub: '820×312' },
+  { label: 'YouTube Thumbnail', ratio: 16 / 9, sub: '1280×720' },
+  { label: 'Twitter Header', ratio: 3, sub: '1500×500' },
+  { label: 'LinkedIn Banner', ratio: 4, sub: '1584×396' },
 ];
 
-const PRESETS = [
-  { label: 'Instagram Post', w: 1080, h: 1080, ratio: 1 },
-  { label: 'Instagram Story', w: 1080, h: 1920, ratio: 9 / 16 },
-  { label: 'Facebook Cover', w: 820, h: 312, ratio: 820 / 312 },
-  { label: 'YouTube Thumbnail', w: 1280, h: 720, ratio: 16 / 9 },
-  { label: 'Twitter Header', w: 1500, h: 500, ratio: 3 },
-  { label: 'LinkedIn Banner', w: 1584, h: 396, ratio: 4 },
-];
+const HANDLE_CURSORS: Record<string, string> = {
+  n: 'cursor-n-resize',
+  s: 'cursor-s-resize',
+  e: 'cursor-e-resize',
+  w: 'cursor-w-resize',
+  nw: 'cursor-nw-resize',
+  ne: 'cursor-ne-resize',
+  sw: 'cursor-sw-resize',
+  se: 'cursor-se-resize',
+};
 
 interface CropBox {
   x: number;
@@ -36,8 +46,6 @@ interface CropBox {
 export default function CropResizePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
-  const [resizeW, setResizeW] = useState('');
-  const [resizeH, setResizeH] = useState('');
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
   const [error, setError] = useState('');
@@ -45,10 +53,9 @@ export default function CropResizePage() {
   const [originalPreview, setOriginalPreview] = useState<string | null>(null);
   const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null);
   const [crop, setCrop] = useState<CropBox>({ x: 0, y: 0, w: 100, h: 100 });
-  const [dragging, setDragging] = useState<'move' | 'resize' | null>(null);
+  const [dragging, setDragging] = useState<HandleDir | null>(null);
   const [dragStart, setDragStart] = useState({ mx: 0, my: 0, cx: 0, cy: 0, cw: 0, ch: 0 });
 
-  const imgContainerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
   const handleFilesChange = useCallback((newFiles: File[]) => {
@@ -58,15 +65,18 @@ export default function CropResizePage() {
     setStatus('idle');
     setError('');
     setImgDims(null);
-    setResizeW('');
-    setResizeH('');
     if (newFiles.length > 0) {
       const url = URL.createObjectURL(newFiles[0]);
       setOriginalPreview(url);
       const img = new Image();
       img.onload = () => {
-        setImgDims({ w: img.naturalWidth, h: img.naturalHeight });
-        setCrop({ x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight });
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        setImgDims({ w, h });
+        // Default crop: 80% of image, centered (freeform)
+        const cw = Math.round(w * 0.8);
+        const ch = Math.round(h * 0.8);
+        setCrop({ x: Math.round((w - cw) / 2), y: Math.round((h - ch) / 2), w: cw, h: ch });
       };
       img.src = url;
     } else {
@@ -79,27 +89,25 @@ export default function CropResizePage() {
     if (!imgDims) return;
     const { w, h } = imgDims;
     if (!aspectRatio) {
-      setCrop({ x: 0, y: 0, w, h });
+      // Freeform: 80% centered
+      const cw = Math.round(w * 0.8);
+      const ch = Math.round(h * 0.8);
+      setCrop({ x: Math.round((w - cw) / 2), y: Math.round((h - ch) / 2), w: cw, h: ch });
     } else {
       let cw: number, ch: number;
       if (w / h > aspectRatio) {
-        ch = h;
-        cw = Math.round(h * aspectRatio);
+        ch = Math.round(h * 0.8);
+        cw = Math.round(ch * aspectRatio);
       } else {
-        cw = w;
-        ch = Math.round(w / aspectRatio);
+        cw = Math.round(w * 0.8);
+        ch = Math.round(cw / aspectRatio);
       }
+      cw = Math.min(cw, w);
+      ch = Math.min(ch, h);
       setCrop({ x: Math.round((w - cw) / 2), y: Math.round((h - ch) / 2), w: cw, h: ch });
     }
   }, [aspectRatio, imgDims]);
 
-  const selectPreset = (preset: typeof PRESETS[number]) => {
-    setAspectRatio(preset.ratio);
-    setResizeW(String(preset.w));
-    setResizeH(String(preset.h));
-  };
-
-  // Display-space helpers
   const getDisplayScale = () => {
     if (!imgRef.current || !imgDims) return 1;
     return imgRef.current.clientWidth / imgDims.w;
@@ -113,10 +121,11 @@ export default function CropResizePage() {
     return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
-  const handlePointerDown = (e: React.MouseEvent | React.TouchEvent, type: 'move' | 'resize') => {
+  const handlePointerDown = (e: React.MouseEvent | React.TouchEvent, dir: HandleDir) => {
     e.preventDefault();
+    e.stopPropagation();
     const pos = getMousePos(e);
-    setDragging(type);
+    setDragging(dir);
     setDragStart({ mx: pos.x, my: pos.y, cx: crop.x, cy: crop.y, cw: crop.w, ch: crop.h });
   };
 
@@ -132,31 +141,64 @@ export default function CropResizePage() {
       const scale = getDisplayScale();
       const dx = (mx - dragStart.mx) / scale;
       const dy = (my - dragStart.my) / scale;
+      const { cx, cy, cw, ch } = dragStart;
 
       if (dragging === 'move') {
-        const nx = Math.max(0, Math.min(imgDims.w - dragStart.cw, dragStart.cx + dx));
-        const ny = Math.max(0, Math.min(imgDims.h - dragStart.ch, dragStart.cy + dy));
+        const nx = Math.max(0, Math.min(imgDims.w - cw, cx + dx));
+        const ny = Math.max(0, Math.min(imgDims.h - ch, cy + dy));
         setCrop((prev) => ({ ...prev, x: Math.round(nx), y: Math.round(ny) }));
-      } else if (dragging === 'resize') {
-        let nw = Math.max(20, dragStart.cw + dx);
-        let nh = Math.max(20, dragStart.ch + dy);
-        if (aspectRatio) {
-          nh = nw / aspectRatio;
-        }
-        nw = Math.min(nw, imgDims.w - crop.x);
-        nh = Math.min(nh, imgDims.h - crop.y);
-        if (aspectRatio) {
-          const constrainedByW = imgDims.w - crop.x;
-          const constrainedByH = imgDims.h - crop.y;
-          const maxByW = constrainedByW;
-          const maxByH = constrainedByH * aspectRatio;
-          nw = Math.min(nw, maxByW, maxByH);
-          nh = nw / aspectRatio;
-        }
-        setCrop((prev) => ({ ...prev, w: Math.round(Math.max(20, nw)), h: Math.round(Math.max(20, nh)) }));
+        return;
       }
+
+      // Determine which edges move
+      const movesN = dragging.includes('n');
+      const movesS = dragging.includes('s');
+      const movesW = dragging.includes('w');
+      const movesE = dragging.includes('e');
+      // Note: for side handles (n, s, e, w), only one axis moves
+
+      let nx = cx, ny = cy, nw = cw, nh = ch;
+
+      if (movesE) { nw = Math.max(20, cw + dx); }
+      if (movesW) { nx = cx + dx; nw = cw - dx; }
+      if (movesS) { nh = Math.max(20, ch + dy); }
+      if (movesN) { ny = cy + dy; nh = ch - dy; }
+
+      // Enforce minimum size
+      if (nw < 20) { if (movesW) { nx = cx + cw - 20; } nw = 20; }
+      if (nh < 20) { if (movesN) { ny = cy + ch - 20; } nh = 20; }
+
+      // Enforce aspect ratio
+      if (aspectRatio) {
+        if (movesE || movesW) {
+          nh = nw / aspectRatio;
+          if (movesN) { ny = cy + ch - nh; }
+        } else {
+          nw = nh * aspectRatio;
+          if (movesW) { nx = cx + cw - nw; }
+        }
+      }
+
+      // Clamp to image bounds
+      nx = Math.max(0, nx);
+      ny = Math.max(0, ny);
+      nw = Math.min(nw, imgDims.w - nx);
+      nh = Math.min(nh, imgDims.h - ny);
+      if (aspectRatio) {
+        const maxW = imgDims.w - nx;
+        const maxH = imgDims.h - ny;
+        if (nw / nh > aspectRatio) {
+          nw = maxH * aspectRatio > maxW ? maxW : maxH * aspectRatio;
+          nh = nw / aspectRatio;
+        } else {
+          nh = maxW / aspectRatio > maxH ? maxH : maxW / aspectRatio;
+          nw = nh * aspectRatio;
+        }
+      }
+
+      setCrop({ x: Math.round(nx), y: Math.round(ny), w: Math.round(Math.max(20, nw)), h: Math.round(Math.max(20, nh)) });
     },
-    [dragging, dragStart, imgDims, aspectRatio, crop.x, crop.y],
+    [dragging, dragStart, imgDims, aspectRatio],
   );
 
   const handlePointerUp = useCallback(() => setDragging(null), []);
@@ -184,16 +226,10 @@ export default function CropResizePage() {
     setResult(null);
 
     try {
-      const rW = resizeW ? parseInt(resizeW) : 0;
-      const rH = resizeH ? parseInt(resizeH) : 0;
       const res = await cropResizeImage(
         files[0],
-        crop.x,
-        crop.y,
-        crop.w,
-        crop.h,
-        rW,
-        rH,
+        crop.x, crop.y, crop.w, crop.h,
+        0, 0, // no resize — output matches crop
         (pct, phase) => {
           setProgress(pct);
           setStatus(phase === 'processing' ? 'processing' : 'uploading');
@@ -204,7 +240,7 @@ export default function CropResizePage() {
       setResult(res);
     } catch (err: any) {
       setStatus('error');
-      setError(err?.response?.data?.detail || err.message || 'Crop/resize failed');
+      setError(err?.response?.data?.detail || err.message || 'Crop failed');
     }
   };
 
@@ -216,8 +252,22 @@ export default function CropResizePage() {
     height: crop.h * scale,
   };
 
-  const outputW = resizeW ? parseInt(resizeW) : crop.w;
-  const outputH = resizeH ? parseInt(resizeH) : crop.h;
+  // Handle size
+  const hs = 10;
+  const hs2 = hs / 2;
+
+  const handles: { dir: HandleDir; style: React.CSSProperties }[] = [
+    // Corners
+    { dir: 'nw', style: { left: -hs2, top: -hs2, width: hs, height: hs } },
+    { dir: 'ne', style: { right: -hs2, top: -hs2, width: hs, height: hs } },
+    { dir: 'sw', style: { left: -hs2, bottom: -hs2, width: hs, height: hs } },
+    { dir: 'se', style: { right: -hs2, bottom: -hs2, width: hs, height: hs } },
+    // Edges
+    { dir: 'n', style: { left: '50%', top: -hs2, width: hs * 2, height: hs, marginLeft: -hs } },
+    { dir: 's', style: { left: '50%', bottom: -hs2, width: hs * 2, height: hs, marginLeft: -hs } },
+    { dir: 'w', style: { left: -hs2, top: '50%', width: hs, height: hs * 2, marginTop: -hs } },
+    { dir: 'e', style: { right: -hs2, top: '50%', width: hs, height: hs * 2, marginTop: -hs } },
+  ];
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
@@ -230,7 +280,7 @@ export default function CropResizePage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Crop & Resize</h1>
         <p className="mt-2 text-gray-600">
-          Crop to any aspect ratio and resize for social media, thumbnails, banners, and more.
+          Crop to any aspect ratio or preset. Output size matches your crop selection.
         </p>
       </div>
 
@@ -239,43 +289,27 @@ export default function CropResizePage() {
         onFilesChange={handleFilesChange}
         multiple={false}
         label="Drop an image to crop"
-        description="Upload an image to crop and resize (PNG, JPG, WebP)"
+        description="Upload an image to crop and resize (PNG, JPG, WebP, AVIF)"
       />
 
       {files.length > 0 && imgDims && (
         <div className="mt-8 space-y-6 animate-fade-in">
-          {/* Presets */}
+          {/* Unified Crop Mode / Preset */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Quick Presets</label>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Crop Mode</label>
             <div className="flex flex-wrap gap-2">
-              {PRESETS.map((p) => (
+              {CROP_MODES.map((m) => (
                 <button
-                  key={p.label}
-                  onClick={() => selectPreset(p)}
-                  className="px-3 py-2 rounded-xl border-2 border-gray-200 bg-white text-sm font-medium text-gray-600 hover:border-orange-400 hover:text-orange-700 transition-all"
-                >
-                  {p.label}
-                  <span className="ml-1 text-xs text-gray-400">{p.w}×{p.h}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Aspect ratios */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Aspect Ratio</label>
-            <div className="flex flex-wrap gap-2">
-              {ASPECT_RATIOS.map((ar) => (
-                <button
-                  key={ar.label}
-                  onClick={() => setAspectRatio(ar.value)}
+                  key={m.label}
+                  onClick={() => setAspectRatio(m.ratio)}
                   className={`px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
-                    aspectRatio === ar.value
+                    aspectRatio === m.ratio
                       ? 'border-orange-500 bg-orange-50 text-orange-700'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
                 >
-                  {ar.label}
+                  {m.label}
+                  {m.sub && <span className="ml-1 text-xs text-gray-400">{m.sub}</span>}
                 </button>
               ))}
             </div>
@@ -284,10 +318,9 @@ export default function CropResizePage() {
           {/* Visual crop editor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              Crop Area — drag to move, drag corner to resize
+              Crop Area — drag to move, use handles to resize
             </label>
             <div
-              ref={imgContainerRef}
               className="relative inline-block rounded-xl overflow-hidden border border-gray-200 select-none"
               style={{ maxWidth: '100%', touchAction: 'none' }}
             >
@@ -299,37 +332,11 @@ export default function CropResizePage() {
                 style={{ maxHeight: '500px' }}
                 draggable={false}
               />
-              {/* Darkened overlay outside crop */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: `linear-gradient(to right, 
-                    rgba(0,0,0,0.5) ${cropDisplay.left}px, 
-                    transparent ${cropDisplay.left}px, 
-                    transparent ${cropDisplay.left + cropDisplay.width}px, 
-                    rgba(0,0,0,0.5) ${cropDisplay.left + cropDisplay.width}px)`,
-                }}
-              />
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  left: 0,
-                  top: 0,
-                  width: '100%',
-                  height: `${cropDisplay.top}px`,
-                  background: 'rgba(0,0,0,0.5)',
-                }}
-              />
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  left: 0,
-                  bottom: 0,
-                  width: '100%',
-                  height: `calc(100% - ${cropDisplay.top + cropDisplay.height}px)`,
-                  background: 'rgba(0,0,0,0.5)',
-                }}
-              />
+              {/* Darkened overlay */}
+              <div className="absolute pointer-events-none" style={{ left: 0, top: 0, width: '100%', height: cropDisplay.top, background: 'rgba(0,0,0,0.5)' }} />
+              <div className="absolute pointer-events-none" style={{ left: 0, top: cropDisplay.top + cropDisplay.height, width: '100%', height: `calc(100% - ${cropDisplay.top + cropDisplay.height}px)`, background: 'rgba(0,0,0,0.5)' }} />
+              <div className="absolute pointer-events-none" style={{ left: 0, top: cropDisplay.top, width: cropDisplay.left, height: cropDisplay.height, background: 'rgba(0,0,0,0.5)' }} />
+              <div className="absolute pointer-events-none" style={{ left: cropDisplay.left + cropDisplay.width, top: cropDisplay.top, width: `calc(100% - ${cropDisplay.left + cropDisplay.width}px)`, height: cropDisplay.height, background: 'rgba(0,0,0,0.5)' }} />
               {/* Crop box */}
               <div
                 className="absolute border-2 border-white cursor-move"
@@ -350,58 +357,29 @@ export default function CropResizePage() {
                   <div className="absolute top-1/3 left-0 right-0 h-px bg-white/30" />
                   <div className="absolute top-2/3 left-0 right-0 h-px bg-white/30" />
                 </div>
-                {/* Resize handle (bottom-right) */}
-                <div
-                  className="absolute -right-2 -bottom-2 w-5 h-5 bg-white border-2 border-orange-500 rounded-full cursor-se-resize shadow-md"
-                  onMouseDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'resize'); }}
-                  onTouchStart={(e) => { e.stopPropagation(); handlePointerDown(e, 'resize'); }}
-                />
+                {/* Resize handles on all corners and edges */}
+                {handles.map((h) => (
+                  <div
+                    key={h.dir}
+                    className={`absolute bg-white border-2 border-orange-500 rounded-sm shadow-md ${HANDLE_CURSORS[h.dir]}`}
+                    style={{ ...h.style, position: 'absolute', zIndex: 10 }}
+                    onMouseDown={(e) => handlePointerDown(e, h.dir)}
+                    onTouchStart={(e) => handlePointerDown(e, h.dir)}
+                  />
+                ))}
                 {/* Size indicator */}
                 <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-[10px] text-white whitespace-nowrap pointer-events-none">
                   {crop.w} × {crop.h}
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Output size controls */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Output Size (optional resize after crop)</label>
-            <div className="flex items-center gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Width</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="8000"
-                  placeholder={String(crop.w)}
-                  value={resizeW}
-                  onChange={(e) => setResizeW(e.target.value)}
-                  className="w-28 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400"
-                />
-              </div>
-              <span className="text-gray-400 mt-5">×</span>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Height</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="8000"
-                  placeholder={String(crop.h)}
-                  value={resizeH}
-                  onChange={(e) => setResizeH(e.target.value)}
-                  className="w-28 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400"
-                />
-              </div>
-              <span className="text-sm text-gray-500 mt-5">px</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              Final output: {outputW || crop.w} × {outputH || crop.h} px
+            <p className="text-xs text-gray-400 mt-2">
+              Output: {crop.w} × {crop.h} px
             </p>
           </div>
 
           {/* Progress */}
-          <ProgressBar progress={progress} status={status} message={error} processingMessage="Cropping & resizing…" />
+          <ProgressBar progress={progress} status={status} message={error} processingMessage="Cropping…" />
 
           {/* Result preview */}
           {result && status === 'done' && (
@@ -436,7 +414,7 @@ export default function CropResizePage() {
               className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg shadow-orange-500/25"
             >
               <Crop className="w-5 h-5" />
-              Crop & Resize
+              Crop
             </button>
             {result && (
               <button

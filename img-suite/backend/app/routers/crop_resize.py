@@ -74,6 +74,10 @@ async def crop_resize(
         out_format = "WEBP"
         media_type = "image/webp"
         ext = ".webp"
+    elif original_ext == ".avif":
+        out_format = "AVIF"
+        media_type = "image/avif"
+        ext = ".avif"
     else:
         out_format = "JPEG"
         media_type = "image/jpeg"
@@ -89,6 +93,8 @@ async def crop_resize(
     save_kwargs = {"format": out_format, "optimize": True}
     if out_format in ("JPEG", "WEBP"):
         save_kwargs["quality"] = 95
+    elif out_format == "AVIF":
+        save_kwargs = {"format": "AVIF", "quality": 80}
     img.save(buf, **save_kwargs)
     buf.seek(0)
 

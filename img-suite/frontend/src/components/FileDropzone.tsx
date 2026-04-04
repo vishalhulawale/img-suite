@@ -15,7 +15,7 @@ interface FileDropzoneProps {
 export default function FileDropzone({
   files,
   onFilesChange,
-  accept = { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+  accept = { 'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.avif'] },
   multiple = false,
   maxFiles = 10,
   label = 'Drop image files here',

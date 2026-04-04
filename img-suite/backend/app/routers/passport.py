@@ -1,13 +1,16 @@
 """Passport photo creation endpoint."""
 
 import io
+import logging
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
 from PIL import Image
+from rembg import remove
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Preset sizes: (width_inches, height_inches, label)
 PRESETS = {
@@ -82,19 +85,23 @@ async def create_passport_photo(
 
     # Determine if preset is in mm or inches
     if preset == "2x2" or preset == "51x51":
-        # Inches-based presets
         target_w = inches_to_pixels(w_val)
         target_h = inches_to_pixels(h_val)
     else:
-        # mm-based presets
         target_w = mm_to_pixels(w_val)
         target_h = mm_to_pixels(h_val)
 
     bg_rgb = hex_to_rgb(bg_color)
 
-    # Convert to RGBA if needed
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
+    # Remove background using rembg for proper bg color application
+    try:
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+        img = remove(img)
+    except Exception as e:
+        logger.warning("Background removal failed, using original image: %s", e)
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
 
     # Resize to fit the target while keeping aspect ratio — center crop
     img_w, img_h = img.size
@@ -102,11 +109,9 @@ async def create_passport_photo(
     img_ratio = img_w / img_h
 
     if img_ratio > target_ratio:
-        # Image is wider — fit height, crop width
         new_h = target_h
         new_w = int(target_h * img_ratio)
     else:
-        # Image is taller — fit width, crop height
         new_w = target_w
         new_h = int(target_w / img_ratio)
 
@@ -122,7 +127,7 @@ async def create_passport_photo(
 
     img = img.crop((left, top, left + target_w, top + target_h))
 
-    # Create background and compose
+    # Create background with user-selected color and composite
     background = Image.new("RGBA", (target_w, target_h), (*bg_rgb, 255))
     background.paste(img, (0, 0), img)
 

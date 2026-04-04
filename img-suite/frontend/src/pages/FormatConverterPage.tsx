@@ -6,12 +6,13 @@ import ImagePreview from '../components/ImagePreview';
 import { convertImage, downloadBlob, ConvertResult } from '../api';
 import SEOHead from '../components/SEOHead';
 
-type Format = 'jpg' | 'png' | 'webp';
+type Format = 'jpg' | 'png' | 'webp' | 'avif';
 
 const FORMATS: { value: Format; label: string; desc: string }[] = [
   { value: 'jpg', label: 'JPG', desc: 'Best for photos, small size' },
   { value: 'png', label: 'PNG', desc: 'Supports transparency, lossless' },
   { value: 'webp', label: 'WebP', desc: 'Modern format, great compression' },
+  { value: 'avif', label: 'AVIF', desc: 'Next-gen format, excellent compression' },
 ];
 
 function formatSize(bytes: number) {
@@ -88,7 +89,7 @@ export default function FormatConverterPage() {
         onFilesChange={handleFilesChange}
         multiple={false}
         label="Drop an image file here"
-        description="Upload an image to convert (PNG, JPG, WebP)"
+        description="Upload an image to convert (PNG, JPG, WebP, AVIF)"
       />
 
       {files.length > 0 && (
@@ -108,7 +109,7 @@ export default function FormatConverterPage() {
 
           {/* Format selection */}
           <label className="block text-sm font-medium text-gray-700 mb-3">Convert to</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {FORMATS.map((f) => (
               <button
                 key={f.value}
@@ -127,8 +128,8 @@ export default function FormatConverterPage() {
             ))}
           </div>
 
-          {/* Quality slider for lossy formats */}
-          {(targetFormat === 'jpg' || targetFormat === 'webp') && (
+          {/* Quality slider for lossy formats (not WEBP — uses internal default) */}
+          {(targetFormat === 'jpg' || targetFormat === 'avif') && (
             <div className="mt-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Quality: {quality}%

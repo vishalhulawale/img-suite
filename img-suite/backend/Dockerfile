@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install minimal system deps for Pillow and onnxruntime
+# Install minimal system deps for Pillow, onnxruntime, and AVIF support
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
@@ -13,6 +13,8 @@ RUN apt-get update && \
     libjpeg62-turbo-dev \
     libpng-dev \
     libwebp-dev \
+    libaom-dev \
+    libavif-dev \
     fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 

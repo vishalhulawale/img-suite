@@ -28,6 +28,8 @@ python -m venv venv
 source venv/Scripts/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
+
+cd backend && source venv/Scripts/activate  && uvicorn app.main:app --reload --port 8000
 ```
 
 **Frontend:**
@@ -36,6 +38,8 @@ uvicorn app.main:app --reload --port 8000
 cd frontend
 npm install
 npm run dev
+
+cd frontend && npm install && npm run dev
 ```
 
 The frontend dev server proxies `/api` requests to `localhost:8000`.

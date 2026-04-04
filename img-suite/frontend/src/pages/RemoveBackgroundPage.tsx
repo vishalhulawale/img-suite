@@ -69,7 +69,7 @@ export default function RemoveBackgroundPage() {
         onFilesChange={handleFilesChange}
         multiple={false}
         label="Drop an image file here"
-        description="Upload a photo to remove its background (PNG, JPG, WebP)"
+        description="Upload a photo to remove its background (PNG, JPG, WebP, AVIF)"
       />
 
       {files.length > 0 && (

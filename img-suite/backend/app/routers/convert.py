@@ -15,6 +15,7 @@ SUPPORTED_FORMATS = {
     "jpeg": ("JPEG", "image/jpeg", ".jpg"),
     "png": ("PNG", "image/png", ".png"),
     "webp": ("WEBP", "image/webp", ".webp"),
+    "avif": ("AVIF", "image/avif", ".avif"),
 }
 
 
@@ -27,7 +28,7 @@ async def convert_image(
 ):
     fmt = format.lower().strip()
     if fmt not in SUPPORTED_FORMATS:
-        raise HTTPException(status_code=400, detail=f"Unsupported format: {fmt}. Use jpg, png, or webp.")
+        raise HTTPException(status_code=400, detail=f"Unsupported format: {fmt}. Use jpg, png, webp, or avif.")
 
     quality = max(1, min(100, quality))
 
@@ -55,14 +56,22 @@ async def convert_image(
         img = background
     elif pil_format == "JPEG" and img.mode != "RGB":
         img = img.convert("RGB")
+    elif pil_format == "AVIF" and has_alpha:
+        img = img if img.mode == "RGBA" else img.convert("RGBA")
 
     buf = io.BytesIO()
 
     save_kwargs = {"format": pil_format, "optimize": True}
-    if pil_format in ("JPEG", "WEBP"):
+    if pil_format == "JPEG":
         save_kwargs["quality"] = quality
-    if pil_format == "WEBP" and has_alpha:
-        img = img if img.mode == "RGBA" else img.convert("RGBA")
+    elif pil_format == "WEBP":
+        # WEBP uses a sensible default; ignore user quality for this workflow
+        save_kwargs["quality"] = 80
+        if has_alpha:
+            img = img if img.mode == "RGBA" else img.convert("RGBA")
+    elif pil_format == "AVIF":
+        save_kwargs["quality"] = quality
+        save_kwargs.pop("optimize", None)
 
     img.save(buf, **save_kwargs)
     buf.seek(0)
