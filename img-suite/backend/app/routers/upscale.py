@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageOps
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
 
@@ -126,6 +126,15 @@ async def upscale_image(
         img.load()
     except Exception:
         raise HTTPException(status_code=400, detail="Could not open image file.")
+
+    # Apply EXIF orientation so dimensions are correct
+    img = ImageOps.exif_transpose(img)
+
+    # Ensure compatible mode early — CMYK, palette, etc. can cause issues
+    if img.mode in ("RGBA", "LA", "PA"):
+        pass  # already has alpha, keep it
+    elif img.mode != "RGB":
+        img = img.convert("RGB")
 
     orig_w, orig_h = img.size
     new_w = orig_w * scale

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Download, Camera } from 'lucide-react';
+import { Download, Camera, ZoomIn, ZoomOut } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import ProgressBar from '../components/ProgressBar';
 import ImagePreview from '../components/ImagePreview';
@@ -21,6 +21,7 @@ export default function PassportPhotoPage() {
   const [bgColor, setBgColor] = useState('#FFFFFF');
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
+  const [zoom, setZoom] = useState(1.0);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
   const [error, setError] = useState('');
@@ -54,6 +55,7 @@ export default function PassportPhotoPage() {
     setError('');
     setOffsetX(0);
     setOffsetY(0);
+    setZoom(1.0);
 
     if (newFiles.length > 0) {
       const url = URL.createObjectURL(newFiles[0]);
@@ -75,7 +77,7 @@ export default function PassportPhotoPage() {
     setResult(null);
 
     try {
-      const res = await createPassportPhoto(files[0], selectedPreset, bgColor, offsetX, offsetY, (pct, phase) => {
+      const res = await createPassportPhoto(files[0], selectedPreset, bgColor, offsetX, offsetY, zoom, (pct, phase) => {
         setProgress(pct);
         setStatus(phase === 'processing' ? 'processing' : 'uploading');
       });
@@ -87,6 +89,28 @@ export default function PassportPhotoPage() {
       setError(err?.response?.data?.detail || err.message || 'Passport photo creation failed');
     }
   };
+
+  // Compute max drag range based on image, preset, and zoom
+  const getMaxOffset = useCallback(() => {
+    if (!imgDims) return { maxX: 500, maxY: 500 };
+    const aspect = PRESET_ASPECTS[selectedPreset] || { w: 2, h: 2 };
+    const presetRatio = aspect.w / aspect.h;
+    const imgRatio = imgDims.w / imgDims.h;
+    let fitW: number, fitH: number;
+    if (imgRatio > presetRatio) {
+      fitH = imgDims.h;
+      fitW = Math.round(imgDims.h * presetRatio);
+    } else {
+      fitW = imgDims.w;
+      fitH = Math.round(imgDims.w / presetRatio);
+    }
+    // After zoom, scaled dimensions are fitW*zoom x fitH*zoom, but image is imgDims
+    // The crop frame stays the same size, but image is larger b/c of zoom
+    // Available movement = (imgDim * zoom - frameDim) / 2 ≈ half surplus
+    const surplusX = Math.max(0, (imgDims.w - fitW / zoom));
+    const surplusY = Math.max(0, (imgDims.h - fitH / zoom));
+    return { maxX: Math.round(surplusX / 2) + 100, maxY: Math.round(surplusY / 2) + 100 };
+  }, [imgDims, selectedPreset, zoom]);
 
   // Drag-to-reposition handlers
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -106,13 +130,23 @@ export default function PassportPhotoPage() {
       const displayScale = previewImgRef.current.clientWidth / imgDims.w;
       const dx = Math.round((clientX - dragStart.mx) / displayScale);
       const dy = Math.round((clientY - dragStart.my) / displayScale);
-      setOffsetX(Math.max(-200, Math.min(200, dragStart.ox + dx)));
-      setOffsetY(Math.max(-200, Math.min(200, dragStart.oy + dy)));
+      const { maxX, maxY } = getMaxOffset();
+      setOffsetX(Math.max(-maxX, Math.min(maxX, dragStart.ox + dx)));
+      setOffsetY(Math.max(-maxY, Math.min(maxY, dragStart.oy + dy)));
     },
-    [dragging, dragStart, imgDims],
+    [dragging, dragStart, imgDims, getMaxOffset],
   );
 
   const handleDragEnd = useCallback(() => setDragging(false), []);
+
+  // Mouse wheel zoom on preview
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      setZoom((z) => Math.round(Math.max(1.0, Math.min(3.0, z + (e.deltaY < 0 ? 0.1 : -0.1))) * 10) / 10);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (dragging) {
@@ -145,6 +179,9 @@ export default function PassportPhotoPage() {
       frameW = imgDims.w;
       frameH = Math.round(imgDims.w / presetRatio);
     }
+    // Zoom shrinks the frame relative to the image (subject gets bigger in frame)
+    frameW = Math.round(frameW / zoom);
+    frameH = Math.round(frameH / zoom);
     frameW = Math.min(frameW, imgDims.w);
     frameH = Math.min(frameH, imgDims.h);
 
@@ -159,7 +196,7 @@ export default function PassportPhotoPage() {
       width: frameW * scale,
       height: frameH * scale,
     };
-  }, [selectedPreset, offsetX, offsetY, imgDims]);
+  }, [selectedPreset, offsetX, offsetY, imgDims, zoom]);
 
   const [overlayStyle, setOverlayStyle] = useState<ReturnType<typeof getOverlayStyle>>(null);
 
@@ -179,7 +216,7 @@ export default function PassportPhotoPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
+    <div className="max-w-6xl mx-auto px-4 py-12">
       <SEOHead
         title="Passport Photo Creator — Free Online Passport Photo Maker"
         description="Create passport photos online for free. Multiple size presets, custom background color, and face position adjustment. No sign-up required."
@@ -202,206 +239,182 @@ export default function PassportPhotoPage() {
       />
 
       {files.length > 0 && (
-        <div className="mt-8 space-y-6 animate-fade-in">
-          {/* Preset Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Photo Size</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {Object.entries(presets).map(([key, preset]) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedPreset(key)}
-                  className={`p-3 rounded-xl border-2 text-left transition-all ${
-                    selectedPreset === key
-                      ? 'border-pink-500 bg-pink-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <p className={`font-semibold text-sm ${selectedPreset === key ? 'text-pink-700' : 'text-gray-700'}`}>
-                    {preset.label}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Background Color */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Background Color</label>
-            <div className="flex items-center gap-3 flex-wrap">
-              {BG_COLORS.map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => setBgColor(c.value)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all ${
-                    bgColor === c.value
-                      ? 'border-pink-500 bg-pink-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div
-                    className="w-5 h-5 rounded-full border border-gray-300"
-                    style={{ backgroundColor: c.value }}
-                  />
-                  <span className="text-sm text-gray-700">{c.label}</span>
-                </button>
-              ))}
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-gray-200 bg-white">
-                <input
-                  type="color"
-                  value={bgColor}
-                  onChange={(e) => setBgColor(e.target.value)}
-                  className="w-5 h-5 rounded cursor-pointer border-0"
-                />
-                <span className="text-sm text-gray-500">Custom</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Preview with Frame Overlay */}
-          {originalPreview && imgDims && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Position your face — drag to adjust
-              </label>
-              <div
-                className="relative inline-block rounded-xl overflow-hidden border border-gray-200 select-none"
-                style={{ maxWidth: '100%', touchAction: 'none', cursor: dragging ? 'grabbing' : 'grab' }}
-                onMouseDown={handleDragStart}
-                onTouchStart={handleDragStart}
-              >
-                <img
-                  ref={previewImgRef}
-                  src={originalPreview}
-                  alt="Passport preview"
-                  className="block max-w-full"
-                  style={{ maxHeight: '450px' }}
-                  draggable={false}
-                  onLoad={() => setOverlayStyle(getOverlayStyle())}
-                />
-                {overlayStyle && (
-                  <>
-                    {/* Top */}
-                    <div className="absolute pointer-events-none" style={{ left: 0, top: 0, width: '100%', height: overlayStyle.top, background: 'rgba(0,0,0,0.45)' }} />
-                    {/* Bottom */}
-                    <div className="absolute pointer-events-none" style={{ left: 0, top: overlayStyle.top + overlayStyle.height, width: '100%', height: `calc(100% - ${overlayStyle.top + overlayStyle.height}px)`, background: 'rgba(0,0,0,0.45)' }} />
-                    {/* Left */}
-                    <div className="absolute pointer-events-none" style={{ left: 0, top: overlayStyle.top, width: overlayStyle.left, height: overlayStyle.height, background: 'rgba(0,0,0,0.45)' }} />
-                    {/* Right */}
-                    <div className="absolute pointer-events-none" style={{ left: overlayStyle.left + overlayStyle.width, top: overlayStyle.top, width: `calc(100% - ${overlayStyle.left + overlayStyle.width}px)`, height: overlayStyle.height, background: 'rgba(0,0,0,0.45)' }} />
-                    {/* Frame border */}
-                    <div
-                      className="absolute pointer-events-none border-2 border-dashed"
-                      style={{
-                        left: overlayStyle.left,
-                        top: overlayStyle.top,
-                        width: overlayStyle.width,
-                        height: overlayStyle.height,
-                        borderColor: bgColor === '#FFFFFF' || bgColor === '#F3F4F6' ? '#ec4899' : bgColor,
-                        boxShadow: '0 0 0 2px rgba(0,0,0,0.2)',
-                      }}
+        <div className="mt-8 animate-fade-in">
+          {/* Two-column layout: settings left, preview right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* LEFT: Settings */}
+            <div className="space-y-6">
+              {/* Preset Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Photo Size</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(presets).map(([key, preset]) => (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedPreset(key)}
+                      className={`p-3 rounded-xl border-2 text-left transition-all ${
+                        selectedPreset === key
+                          ? 'border-pink-500 bg-pink-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
                     >
-                      {/* Head guide oval */}
-                      <div className="absolute pointer-events-none" style={{ left: '25%', top: '8%', width: '50%', height: '55%', border: '1.5px dashed rgba(255,255,255,0.5)', borderRadius: '50%' }} />
-                      {/* Preset label */}
-                      <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-[10px] text-white whitespace-nowrap">
-                        {presets[selectedPreset]?.label || selectedPreset}
-                      </div>
-                    </div>
-                  </>
+                      <p className={`font-semibold text-sm ${selectedPreset === key ? 'text-pink-700' : 'text-gray-700'}`}>
+                        {preset.label}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Background Color */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Background Color</label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {BG_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => setBgColor(c.value)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all ${
+                        bgColor === c.value
+                          ? 'border-pink-500 bg-pink-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div
+                        className="w-5 h-5 rounded-full border border-gray-300"
+                        style={{ backgroundColor: c.value }}
+                      />
+                      <span className="text-sm text-gray-700">{c.label}</span>
+                    </button>
+                  ))}
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-gray-200 bg-white">
+                    <input
+                      type="color"
+                      value={bgColor}
+                      onChange={(e) => setBgColor(e.target.value)}
+                      className="w-5 h-5 rounded cursor-pointer border-0"
+                    />
+                    <span className="text-sm text-gray-500">Custom</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Zoom control */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Zoom: {zoom.toFixed(1)}×</label>
+                <div className="flex items-center gap-3">
+                  <ZoomOut className="w-4 h-4 text-gray-400" />
+                  <input
+                    type="range"
+                    min="100"
+                    max="300"
+                    value={Math.round(zoom * 100)}
+                    onChange={(e) => setZoom(parseInt(e.target.value) / 100)}
+                    className="flex-1 accent-pink-500"
+                  />
+                  <ZoomIn className="w-4 h-4 text-gray-400" />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Zoom in to crop tighter around the face. You can also scroll on the preview.</p>
+              </div>
+
+              {/* Progress */}
+              <ProgressBar
+                progress={progress}
+                status={status}
+                message={error}
+                processingMessage="Creating passport photo…"
+              />
+
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCreate}
+                  disabled={!files[0] || status === 'uploading' || status === 'processing'}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-pink-600 text-white font-semibold rounded-xl hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg shadow-pink-500/25"
+                >
+                  <Camera className="w-5 h-5" />
+                  Create Passport Photo
+                </button>
+                {result && (
+                  <button
+                    onClick={() => downloadBlob(result.blob, result.filename)}
+                    className="px-6 py-3.5 bg-white text-pink-700 font-semibold rounded-xl border-2 border-pink-200 hover:bg-pink-50 transition-colors"
+                  >
+                    <Download className="w-5 h-5 inline mr-1" />
+                    Download
+                  </button>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-2">Drag the image to reposition your face within the frame.</p>
             </div>
-          )}
 
-          {/* Fine-tune sliders */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Fine-tune Position</label>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Horizontal (px)</label>
-                <input
-                  type="range"
-                  min="-200"
-                  max="200"
-                  value={offsetX}
-                  onChange={(e) => setOffsetX(parseInt(e.target.value))}
-                  className="w-full accent-pink-500"
-                />
-                <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                  <span>← Left</span>
-                  <span className="font-medium text-gray-600">{offsetX}px</span>
-                  <span>Right →</span>
+            {/* RIGHT: Preview */}
+            <div className="space-y-4">
+              {originalPreview && imgDims && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Drag to position — scroll to zoom
+                  </label>
+                  <div
+                    className="relative inline-block rounded-xl overflow-hidden border border-gray-200 select-none"
+                    style={{ maxWidth: '100%', touchAction: 'none', cursor: dragging ? 'grabbing' : 'grab' }}
+                    onMouseDown={handleDragStart}
+                    onTouchStart={handleDragStart}
+                    onWheel={handleWheel}
+                  >
+                    <img
+                      ref={previewImgRef}
+                      src={originalPreview}
+                      alt="Passport preview"
+                      className="block max-w-full"
+                      style={{ maxHeight: '500px' }}
+                      draggable={false}
+                      onLoad={() => setOverlayStyle(getOverlayStyle())}
+                    />
+                    {overlayStyle && (
+                      <>
+                        <div className="absolute pointer-events-none" style={{ left: 0, top: 0, width: '100%', height: overlayStyle.top, background: 'rgba(0,0,0,0.45)' }} />
+                        <div className="absolute pointer-events-none" style={{ left: 0, top: overlayStyle.top + overlayStyle.height, width: '100%', height: `calc(100% - ${overlayStyle.top + overlayStyle.height}px)`, background: 'rgba(0,0,0,0.45)' }} />
+                        <div className="absolute pointer-events-none" style={{ left: 0, top: overlayStyle.top, width: overlayStyle.left, height: overlayStyle.height, background: 'rgba(0,0,0,0.45)' }} />
+                        <div className="absolute pointer-events-none" style={{ left: overlayStyle.left + overlayStyle.width, top: overlayStyle.top, width: `calc(100% - ${overlayStyle.left + overlayStyle.width}px)`, height: overlayStyle.height, background: 'rgba(0,0,0,0.45)' }} />
+                        <div
+                          className="absolute pointer-events-none border-2 border-dashed"
+                          style={{
+                            left: overlayStyle.left,
+                            top: overlayStyle.top,
+                            width: overlayStyle.width,
+                            height: overlayStyle.height,
+                            borderColor: bgColor === '#FFFFFF' || bgColor === '#F3F4F6' ? '#ec4899' : bgColor,
+                            boxShadow: '0 0 0 2px rgba(0,0,0,0.2)',
+                          }}
+                        >
+                          <div className="absolute pointer-events-none" style={{ left: '25%', top: '8%', width: '50%', height: '55%', border: '1.5px dashed rgba(255,255,255,0.5)', borderRadius: '50%' }} />
+                          <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 rounded text-[10px] text-white whitespace-nowrap">
+                            {presets[selectedPreset]?.label || selectedPreset}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Drag to reposition. Scroll or use the zoom slider to zoom in/out.</p>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Vertical (px)</label>
-                <input
-                  type="range"
-                  min="-200"
-                  max="200"
-                  value={offsetY}
-                  onChange={(e) => setOffsetY(parseInt(e.target.value))}
-                  className="w-full accent-pink-500"
-                />
-                <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                  <span>↑ Up</span>
-                  <span className="font-medium text-gray-600">{offsetY}px</span>
-                  <span>Down ↓</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress */}
-          <ProgressBar
-            progress={progress}
-            status={status}
-            message={error}
-            processingMessage="Creating passport photo…"
-          />
-
-          {/* Result preview */}
-          {result && status === 'done' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {originalPreview && (
-                <ImagePreview src={originalPreview} alt="Original" label="Original Photo" />
               )}
-              <ImagePreview src={result.previewUrl} alt="Passport Photo" label="Passport Photo" />
-            </div>
-          )}
 
-          {result && status === 'done' && (
-            <div className="p-5 bg-pink-50 border border-pink-200 rounded-xl animate-fade-in">
-              <div className="flex items-center gap-3">
-                <Camera className="w-5 h-5 text-pink-600" />
-                <span className="font-semibold text-pink-800">Passport photo created!</span>
-              </div>
-              <p className="text-sm text-pink-600 mt-1">
-                Size: {presets[selectedPreset]?.label || selectedPreset} at 300 DPI.
-              </p>
+              {/* Result preview */}
+              {result && status === 'done' && (
+                <>
+                  <ImagePreview src={result.previewUrl} alt="Passport Photo" label="Passport Photo Result" />
+                  <div className="p-4 bg-pink-50 border border-pink-200 rounded-xl animate-fade-in">
+                    <div className="flex items-center gap-3">
+                      <Camera className="w-5 h-5 text-pink-600" />
+                      <span className="font-semibold text-pink-800">Passport photo created!</span>
+                    </div>
+                    <p className="text-sm text-pink-600 mt-1">
+                      Size: {presets[selectedPreset]?.label || selectedPreset} at 300 DPI.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
-          )}
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleCreate}
-              disabled={!files[0] || status === 'uploading' || status === 'processing'}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-pink-600 text-white font-semibold rounded-xl hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg shadow-pink-500/25"
-            >
-              <Camera className="w-5 h-5" />
-              Create Passport Photo
-            </button>
-            {result && (
-              <button
-                onClick={() => downloadBlob(result.blob, result.filename)}
-                className="px-6 py-3.5 bg-white text-pink-700 font-semibold rounded-xl border-2 border-pink-200 hover:bg-pink-50 transition-colors"
-              >
-                <Download className="w-5 h-5 inline mr-1" />
-                Download
-              </button>
-            )}
           </div>
         </div>
       )}

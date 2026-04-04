@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Download, RefreshCw, ArrowRightLeft } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import ProgressBar from '../components/ProgressBar';
@@ -24,7 +24,6 @@ function formatSize(bytes: number) {
 export default function FormatConverterPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [targetFormat, setTargetFormat] = useState<Format>('png');
-  const [quality, setQuality] = useState(90);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
   const [error, setError] = useState('');
@@ -48,6 +47,16 @@ export default function FormatConverterPage() {
   const sourceHasAlpha = sourceExt === 'png' || sourceExt === 'webp';
   const showTransparencyWarning = sourceHasAlpha && targetFormat === 'jpg';
 
+  // Auto-select first format that isn't the source format
+  useEffect(() => {
+    if (!sourceExt) return;
+    const normalised = sourceExt === 'jpeg' ? 'jpg' : sourceExt;
+    if (normalised === targetFormat) {
+      const alt = FORMATS.find((f) => f.value !== normalised);
+      if (alt) setTargetFormat(alt.value);
+    }
+  }, [sourceExt]);
+
   const handleConvert = async () => {
     if (!files[0]) return;
     setStatus('uploading');
@@ -56,7 +65,7 @@ export default function FormatConverterPage() {
     setResult(null);
 
     try {
-      const res = await convertImage(files[0], targetFormat, quality, (pct, phase) => {
+      const res = await convertImage(files[0], targetFormat, 85, (pct, phase) => {
         setProgress(pct);
         setStatus(phase === 'processing' ? 'processing' : 'uploading');
       });
@@ -110,44 +119,29 @@ export default function FormatConverterPage() {
           {/* Format selection */}
           <label className="block text-sm font-medium text-gray-700 mb-3">Convert to</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {FORMATS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setTargetFormat(f.value)}
-                className={`p-4 rounded-xl border-2 text-left transition-all ${
-                  targetFormat === f.value
-                    ? 'border-teal-500 bg-teal-50'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <p className={`font-semibold text-sm ${targetFormat === f.value ? 'text-teal-700' : 'text-gray-700'}`}>
-                  {f.label}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">{f.desc}</p>
-              </button>
-            ))}
+            {FORMATS.map((f) => {
+              const isSameFormat = sourceExt === f.value || (sourceExt === 'jpeg' && f.value === 'jpg');
+              return (
+                <button
+                  key={f.value}
+                  onClick={() => !isSameFormat && setTargetFormat(f.value)}
+                  disabled={isSameFormat}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${
+                    isSameFormat
+                      ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                      : targetFormat === f.value
+                        ? 'border-teal-500 bg-teal-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <p className={`font-semibold text-sm ${isSameFormat ? 'text-gray-400' : targetFormat === f.value ? 'text-teal-700' : 'text-gray-700'}`}>
+                    {f.label}{isSameFormat ? ' (current)' : ''}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{f.desc}</p>
+                </button>
+              );
+            })}
           </div>
-
-          {/* Quality slider for lossy formats (not WEBP — uses internal default) */}
-          {(targetFormat === 'jpg' || targetFormat === 'avif') && (
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quality: {quality}%
-              </label>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                value={quality}
-                onChange={(e) => setQuality(parseInt(e.target.value))}
-                className="w-full accent-teal-500"
-              />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>Smaller file</span>
-                <span>Better quality</span>
-              </div>
-            </div>
-          )}
 
           {/* Transparency warning */}
           {showTransparencyWarning && (

@@ -63,14 +63,13 @@ async def convert_image(
 
     save_kwargs = {"format": pil_format, "optimize": True}
     if pil_format == "JPEG":
-        save_kwargs["quality"] = quality
+        save_kwargs["quality"] = 85
     elif pil_format == "WEBP":
-        # WEBP uses a sensible default; ignore user quality for this workflow
         save_kwargs["quality"] = 80
         if has_alpha:
             img = img if img.mode == "RGBA" else img.convert("RGBA")
     elif pil_format == "AVIF":
-        save_kwargs["quality"] = quality
+        save_kwargs["quality"] = 65
         save_kwargs.pop("optimize", None)
 
     img.save(buf, **save_kwargs)

@@ -143,7 +143,21 @@ async def compress_endpoint(
     buf, media_type, ext = compress_image(img, level, target_size_kb, original_ext)
     compressed_size = buf.getbuffer().nbytes
 
-    if original_size > 0:
+    # Never return a file larger than the original
+    skipped = False
+    if compressed_size >= original_size:
+        skipped = True
+        # Return the original file
+        with open(path, "rb") as f:
+            original_data = f.read()
+        buf = io.BytesIO(original_data)
+        compressed_size = original_size
+        # Keep original media type
+        ext_map = {".png": "image/png", ".webp": "image/webp", ".avif": "image/avif"}
+        media_type = ext_map.get(original_ext.lower(), "image/jpeg")
+        ext = original_ext or ".jpg"
+
+    if original_size > 0 and not skipped:
         ratio = round((1 - compressed_size / original_size) * 100, 1)
     else:
         ratio = 0
@@ -158,5 +172,6 @@ async def compress_endpoint(
             "X-Original-Size": str(original_size),
             "X-Compressed-Size": str(compressed_size),
             "X-Compression-Ratio": f"{ratio}%",
+            "X-Compression-Skipped": "true" if skipped else "false",
         },
     )

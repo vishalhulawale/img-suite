@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Download, Crop } from 'lucide-react';
+import { Download, Crop, ZoomIn, ZoomOut } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import ProgressBar from '../components/ProgressBar';
 import ImagePreview from '../components/ImagePreview';
@@ -55,8 +55,10 @@ export default function CropResizePage() {
   const [crop, setCrop] = useState<CropBox>({ x: 0, y: 0, w: 100, h: 100 });
   const [dragging, setDragging] = useState<HandleDir | null>(null);
   const [dragStart, setDragStart] = useState({ mx: 0, my: 0, cx: 0, cy: 0, cw: 0, ch: 0 });
+  const [viewZoom, setViewZoom] = useState(1);
 
   const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleFilesChange = useCallback((newFiles: File[]) => {
     setFiles(newFiles);
@@ -113,6 +115,10 @@ export default function CropResizePage() {
     return imgRef.current.clientWidth / imgDims.w;
   };
 
+  const getMouseScale = () => {
+    return getDisplayScale() * viewZoom;
+  };
+
   const getMousePos = (e: React.MouseEvent | React.TouchEvent) => {
     const rect = imgRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
@@ -138,7 +144,7 @@ export default function CropResizePage() {
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const mx = clientX - rect.left;
       const my = clientY - rect.top;
-      const scale = getDisplayScale();
+      const scale = getMouseScale();
       const dx = (mx - dragStart.mx) / scale;
       const dy = (my - dragStart.my) / scale;
       const { cx, cy, cw, ch } = dragStart;
@@ -317,12 +323,38 @@ export default function CropResizePage() {
 
           {/* Visual crop editor */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Crop Area — drag to move, use handles to resize
-            </label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Crop Area — drag to move, use handles to resize
+              </label>
+              <div className="flex items-center gap-2">
+                <ZoomOut className="w-4 h-4 text-gray-400" />
+                <input
+                  type="range"
+                  min="100"
+                  max="400"
+                  value={Math.round(viewZoom * 100)}
+                  onChange={(e) => setViewZoom(parseInt(e.target.value) / 100)}
+                  className="w-24 accent-orange-500"
+                />
+                <ZoomIn className="w-4 h-4 text-gray-400" />
+                <span className="text-xs text-gray-500 w-10">{Math.round(viewZoom * 100)}%</span>
+              </div>
+            </div>
             <div
-              className="relative inline-block rounded-xl overflow-hidden border border-gray-200 select-none"
-              style={{ maxWidth: '100%', touchAction: 'none' }}
+              ref={containerRef}
+              className="rounded-xl overflow-auto border border-gray-200"
+              style={{ maxHeight: '520px' }}
+              onWheel={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  e.preventDefault();
+                  setViewZoom((z) => Math.round(Math.max(1, Math.min(4, z + (e.deltaY < 0 ? 0.1 : -0.1))) * 10) / 10);
+                }
+              }}
+            >
+            <div
+              className="relative inline-block select-none origin-top-left"
+              style={{ touchAction: 'none', transform: `scale(${viewZoom})` }}
             >
               <img
                 ref={imgRef}
@@ -373,8 +405,9 @@ export default function CropResizePage() {
                 </div>
               </div>
             </div>
+            </div>
             <p className="text-xs text-gray-400 mt-2">
-              Output: {crop.w} × {crop.h} px
+              Output: {crop.w} × {crop.h} px{viewZoom > 1 ? ` — Ctrl+scroll to zoom preview` : ' — Ctrl+scroll to zoom in'}
             </p>
           </div>
 

@@ -158,25 +158,33 @@ export default function CompressPage() {
 
           {/* Results */}
           {result && status === 'done' && (
-            <div className="mt-6 p-5 bg-green-50 border border-green-200 rounded-xl animate-fade-in">
+            <div className={`mt-6 p-5 ${result.skipped ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'} border rounded-xl animate-fade-in`}>
               <div className="flex items-center gap-3 mb-3">
-                <TrendingDown className="w-5 h-5 text-green-600" />
-                <span className="font-semibold text-green-800">Compression Complete</span>
+                <TrendingDown className={`w-5 h-5 ${result.skipped ? 'text-amber-600' : 'text-green-600'}`} />
+                <span className={`font-semibold ${result.skipped ? 'text-amber-800' : 'text-green-800'}`}>
+                  {result.skipped ? 'Compression skipped — file is already optimal' : 'Compression Complete'}
+                </span>
               </div>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-xs text-gray-500">Original</p>
-                  <p className="font-semibold text-gray-800">{formatSize(result.originalSize)}</p>
+              {result.skipped ? (
+                <p className="text-sm text-amber-700">
+                  Compressing this image would increase its file size ({formatSize(result.originalSize)}), so the original was returned unchanged.
+                </p>
+              ) : (
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-xs text-gray-500">Original</p>
+                    <p className="font-semibold text-gray-800">{formatSize(result.originalSize)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Compressed</p>
+                    <p className="font-semibold text-green-700">{formatSize(result.compressedSize)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Saved</p>
+                    <p className="font-semibold text-green-700">{result.ratio}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Compressed</p>
-                  <p className="font-semibold text-green-700">{formatSize(result.compressedSize)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Saved</p>
-                  <p className="font-semibold text-green-700">{result.ratio}</p>
-                </div>
-              </div>
+              )}
             </div>
           )}
 

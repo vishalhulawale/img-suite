@@ -65,6 +65,7 @@ async def create_passport_photo(
     bg_color: str = Form("#FFFFFF", description="Background color in hex"),
     offset_x: int = Form(0, description="Horizontal face offset in pixels"),
     offset_y: int = Form(0, description="Vertical face offset in pixels"),
+    zoom: float = Form(1.0, description="Zoom factor (1.0 = fit, >1 = zoom in)"),
     background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """Create a passport-style photo with the given preset and background color."""
@@ -92,18 +93,21 @@ async def create_passport_photo(
         target_h = mm_to_pixels(h_val)
 
     bg_rgb = hex_to_rgb(bg_color)
+    zoom = max(1.0, min(3.0, zoom))
 
     # Remove background using rembg for proper bg color application
     try:
         if img.mode != "RGBA":
             img = img.convert("RGBA")
-        img = remove(img)
+        img = remove(img, alpha_matting=True, alpha_matting_foreground_threshold=230,
+                      alpha_matting_background_threshold=20, alpha_matting_erode_size=10,
+                      post_process_mask=True)
     except Exception as e:
         logger.warning("Background removal failed, using original image: %s", e)
         if img.mode != "RGBA":
             img = img.convert("RGBA")
 
-    # Resize to fit the target while keeping aspect ratio — center crop
+    # Resize to fit the target while keeping aspect ratio — apply zoom
     img_w, img_h = img.size
     target_ratio = target_w / target_h
     img_ratio = img_w / img_h
@@ -114,6 +118,10 @@ async def create_passport_photo(
     else:
         new_w = target_w
         new_h = int(target_w / img_ratio)
+
+    # Apply zoom: scale up by zoom factor
+    new_w = int(new_w * zoom)
+    new_h = int(new_h * zoom)
 
     img = img.resize((new_w, new_h), Image.LANCZOS)
 

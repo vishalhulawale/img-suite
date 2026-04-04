@@ -27,9 +27,20 @@ async def remove_background(
         raise HTTPException(status_code=400, detail="Could not open image file.")
 
     try:
-        result = remove(img)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Background removal failed: {str(e)}")
+        result = remove(
+            img,
+            alpha_matting=True,
+            alpha_matting_foreground_threshold=230,
+            alpha_matting_background_threshold=20,
+            alpha_matting_erode_size=10,
+            post_process_mask=True,
+        )
+    except Exception:
+        # Fallback: try without alpha-matting if it fails (e.g. small images)
+        try:
+            result = remove(img, post_process_mask=True)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Background removal failed: {str(e)}")
 
     buf = io.BytesIO()
     result.save(buf, format="PNG", optimize=True)

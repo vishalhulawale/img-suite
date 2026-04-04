@@ -83,12 +83,10 @@ export default function RemoveBackgroundPage() {
             />
           </div>
 
-          {/* Previews */}
-          {(originalPreview || result) && status !== 'uploading' && status !== 'processing' && (
+          {/* Previews — always show original, result only when done */}
+          {originalPreview && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {originalPreview && (
-                <ImagePreview src={originalPreview} alt="Original" label="Original" />
-              )}
+              <ImagePreview src={originalPreview} alt="Original" label="Original" />
               {result && (
                 <ImagePreview src={result.previewUrl} alt="Background Removed" label="Background Removed" />
               )}

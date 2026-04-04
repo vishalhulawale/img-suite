@@ -30,6 +30,7 @@ export interface CompressResult {
   compressedSize: number;
   ratio: string;
   previewUrl: string;
+  skipped: boolean;
 }
 
 export async function compressImage(
@@ -95,6 +96,7 @@ export async function compressImage(
     compressedSize,
     ratio,
     previewUrl: createPreviewUrl(blob),
+    skipped: res.headers['x-compression-skipped'] === 'true',
   };
 }
 
@@ -183,6 +185,7 @@ export async function createPassportPhoto(
   bgColor: string,
   offsetX: number,
   offsetY: number,
+  zoom: number,
   onProgress?: (pct: number, phase: 'uploading' | 'processing') => void,
 ): Promise<PassportResult> {
   const form = new FormData();
@@ -191,6 +194,7 @@ export async function createPassportPhoto(
   form.append('bg_color', bgColor);
   form.append('offset_x', String(offsetX));
   form.append('offset_y', String(offsetY));
+  form.append('zoom', String(zoom));
 
   let uploadDone = false;
   let processingTimer: ReturnType<typeof setInterval> | null = null;
