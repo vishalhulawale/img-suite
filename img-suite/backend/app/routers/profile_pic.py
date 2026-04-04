@@ -8,6 +8,8 @@ from PIL import Image, ImageFilter
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 PLATFORM_PRESETS = {
@@ -68,6 +70,7 @@ async def create_profile_picture(
         img = Image.open(path)
         img.load()
     except Exception:
+        logger.exception("Failed to open image file")
         raise HTTPException(status_code=400, detail="Could not open image file.")
 
     if img.mode not in ("RGB", "RGBA"):

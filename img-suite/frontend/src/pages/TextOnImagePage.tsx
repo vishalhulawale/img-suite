@@ -158,225 +158,278 @@ export default function TextOnImagePage() {
 
       {files.length > 0 && (
         <div className="mt-8 space-y-6 animate-fade-in">
-          {/* Quick styles */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Quick Styles</label>
-            <div className="flex flex-wrap gap-2">
-              {QUICK_STYLES.map((style) => (
-                <button
-                  key={style.label}
-                  onClick={() => applyQuickStyle(style.config)}
-                  className="px-3 py-2 rounded-xl border-2 border-gray-200 bg-white text-sm font-medium text-gray-600 hover:border-sky-400 hover:text-sky-700 transition-all"
-                >
-                  {style.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Layer tabs */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <label className="text-sm font-medium text-gray-700">Text Layers</label>
-              <button
-                onClick={addLayer}
-                disabled={layers.length >= 10}
-                className="p-1 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 disabled:opacity-50 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {layers.map((layer, i) => (
-                <div key={layer.id} className="flex items-center gap-1">
-                  <button
-                    onClick={() => setActiveLayer(i)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                      activeLayer === i
-                        ? 'bg-sky-100 text-sky-700 border-2 border-sky-400'
-                        : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:border-gray-300'
-                    }`}
-                  >
-                    {layer.text.slice(0, 15) || `Layer ${i + 1}`}
-                  </button>
-                  {layers.length > 1 && (
-                    <button
-                      onClick={() => removeLayer(i)}
-                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Active layer editor */}
-          {current && (
-            <div className="space-y-4 p-4 bg-white border border-gray-200 rounded-xl">
+          {/* Two-column: settings left, live preview right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* LEFT: Settings */}
+            <div className="space-y-6">
+              {/* Quick styles */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Text</label>
-                <input
-                  type="text"
-                  value={current.text}
-                  onChange={(e) => updateLayer(activeLayer, { text: e.target.value })}
-                  maxLength={200}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="Enter your text…"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Font Size: {current.font_size}px</label>
-                  <input
-                    type="range"
-                    min="12"
-                    max="120"
-                    value={current.font_size}
-                    onChange={(e) => updateLayer(activeLayer, { font_size: parseInt(e.target.value) })}
-                    className="w-full accent-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">X Position: {current.x}%</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={current.x}
-                    onChange={(e) => updateLayer(activeLayer, { x: parseInt(e.target.value) })}
-                    className="w-full accent-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Y Position: {current.y}%</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={current.y}
-                    onChange={(e) => updateLayer(activeLayer, { y: parseInt(e.target.value) })}
-                    className="w-full accent-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Opacity: {Math.round(current.opacity * 100)}%</label>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={Math.round(current.opacity * 100)}
-                    onChange={(e) => updateLayer(activeLayer, { opacity: parseInt(e.target.value) / 100 })}
-                    className="w-full accent-sky-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-500">Color</label>
-                  <input
-                    type="color"
-                    value={current.color}
-                    onChange={(e) => updateLayer(activeLayer, { color: e.target.value })}
-                    className="w-8 h-8 rounded cursor-pointer border border-gray-200"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-500">Align</label>
-                  {(['left', 'center', 'right'] as const).map((a) => (
+                <label className="block text-sm font-medium text-gray-700 mb-3">Quick Styles</label>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_STYLES.map((style) => (
                     <button
-                      key={a}
-                      onClick={() => updateLayer(activeLayer, { align: a })}
-                      className={`px-2 py-1 text-xs rounded-lg border ${
-                        current.align === a ? 'border-sky-400 bg-sky-50 text-sky-700' : 'border-gray-200 text-gray-500'
-                      }`}
+                      key={style.label}
+                      onClick={() => applyQuickStyle(style.config)}
+                      className="px-3 py-2 rounded-xl border-2 border-gray-200 bg-white text-sm font-medium text-gray-600 hover:border-sky-400 hover:text-sky-700 transition-all"
                     >
-                      {a.charAt(0).toUpperCase() + a.slice(1)}
+                      {style.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={current.bold}
-                    onChange={(e) => updateLayer(activeLayer, { bold: e.target.checked })}
-                    className="rounded accent-sky-500"
-                  />
-                  <span className="text-sm text-gray-700">Bold</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={current.shadow}
-                    onChange={(e) => updateLayer(activeLayer, { shadow: e.target.checked })}
-                    className="rounded accent-sky-500"
-                  />
-                  <span className="text-sm text-gray-700">Shadow</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={current.outline}
-                    onChange={(e) => updateLayer(activeLayer, { outline: e.target.checked })}
-                    className="rounded accent-sky-500"
-                  />
-                  <span className="text-sm text-gray-700">Outline</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={current.bg_box}
-                    onChange={(e) => updateLayer(activeLayer, { bg_box: e.target.checked })}
-                    className="rounded accent-sky-500"
-                  />
-                  <span className="text-sm text-gray-700">Background Box</span>
-                </label>
+              {/* Layer tabs */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <label className="text-sm font-medium text-gray-700">Text Layers</label>
+                  <button
+                    onClick={addLayer}
+                    disabled={layers.length >= 10}
+                    className="p-1 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 disabled:opacity-50 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {layers.map((layer, i) => (
+                    <div key={layer.id} className="flex items-center gap-1">
+                      <button
+                        onClick={() => setActiveLayer(i)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                          activeLayer === i
+                            ? 'bg-sky-100 text-sky-700 border-2 border-sky-400'
+                            : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:border-gray-300'
+                        }`}
+                      >
+                        {layer.text.slice(0, 15) || `Layer ${i + 1}`}
+                      </button>
+                      {layers.length > 1 && (
+                        <button
+                          onClick={() => removeLayer(i)}
+                          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {current.bg_box && (
-                <div className="flex items-center gap-4 pl-4 border-l-2 border-sky-200">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-gray-500">Box Color</label>
-                    <input
-                      type="color"
-                      value={current.bg_box_color}
-                      onChange={(e) => updateLayer(activeLayer, { bg_box_color: e.target.value })}
-                      className="w-8 h-8 rounded cursor-pointer border border-gray-200"
-                    />
-                  </div>
+              {/* Active layer editor */}
+              {current && (
+                <div className="space-y-4 p-4 bg-white border border-gray-200 rounded-xl">
                   <div>
-                    <label className="text-xs text-gray-500">Box Opacity: {Math.round(current.bg_box_opacity * 100)}%</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Text</label>
                     <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={Math.round(current.bg_box_opacity * 100)}
-                      onChange={(e) => updateLayer(activeLayer, { bg_box_opacity: parseInt(e.target.value) / 100 })}
-                      className="w-full accent-sky-500"
+                      type="text"
+                      value={current.text}
+                      onChange={(e) => updateLayer(activeLayer, { text: e.target.value })}
+                      maxLength={200}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                      placeholder="Enter your text…"
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Font Size: {current.font_size}px</label>
+                      <input
+                        type="range"
+                        min="12"
+                        max="120"
+                        value={current.font_size}
+                        onChange={(e) => updateLayer(activeLayer, { font_size: parseInt(e.target.value) })}
+                        className="w-full accent-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">X Position: {current.x}%</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={current.x}
+                        onChange={(e) => updateLayer(activeLayer, { x: parseInt(e.target.value) })}
+                        className="w-full accent-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Y Position: {current.y}%</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={current.y}
+                        onChange={(e) => updateLayer(activeLayer, { y: parseInt(e.target.value) })}
+                        className="w-full accent-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Opacity: {Math.round(current.opacity * 100)}%</label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        value={Math.round(current.opacity * 100)}
+                        onChange={(e) => updateLayer(activeLayer, { opacity: parseInt(e.target.value) / 100 })}
+                        className="w-full accent-sky-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-500">Color</label>
+                      <input
+                        type="color"
+                        value={current.color}
+                        onChange={(e) => updateLayer(activeLayer, { color: e.target.value })}
+                        className="w-8 h-8 rounded cursor-pointer border border-gray-200"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-500">Align</label>
+                      {(['left', 'center', 'right'] as const).map((a) => (
+                        <button
+                          key={a}
+                          onClick={() => updateLayer(activeLayer, { align: a })}
+                          className={`px-2 py-1 text-xs rounded-lg border ${
+                            current.align === a ? 'border-sky-400 bg-sky-50 text-sky-700' : 'border-gray-200 text-gray-500'
+                          }`}
+                        >
+                          {a.charAt(0).toUpperCase() + a.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={current.bold}
+                        onChange={(e) => updateLayer(activeLayer, { bold: e.target.checked })}
+                        className="rounded accent-sky-500"
+                      />
+                      <span className="text-sm text-gray-700">Bold</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={current.shadow}
+                        onChange={(e) => updateLayer(activeLayer, { shadow: e.target.checked })}
+                        className="rounded accent-sky-500"
+                      />
+                      <span className="text-sm text-gray-700">Shadow</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={current.outline}
+                        onChange={(e) => updateLayer(activeLayer, { outline: e.target.checked })}
+                        className="rounded accent-sky-500"
+                      />
+                      <span className="text-sm text-gray-700">Outline</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={current.bg_box}
+                        onChange={(e) => updateLayer(activeLayer, { bg_box: e.target.checked })}
+                        className="rounded accent-sky-500"
+                      />
+                      <span className="text-sm text-gray-700">Background Box</span>
+                    </label>
+                  </div>
+
+                  {current.bg_box && (
+                    <div className="flex items-center gap-4 pl-4 border-l-2 border-sky-200">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-500">Box Color</label>
+                        <input
+                          type="color"
+                          value={current.bg_box_color}
+                          onChange={(e) => updateLayer(activeLayer, { bg_box_color: e.target.value })}
+                          className="w-8 h-8 rounded cursor-pointer border border-gray-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500">Box Opacity: {Math.round(current.bg_box_opacity * 100)}%</label>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={Math.round(current.bg_box_opacity * 100)}
+                          onChange={(e) => updateLayer(activeLayer, { bg_box_opacity: parseInt(e.target.value) / 100 })}
+                          className="w-full accent-sky-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
 
-          {/* Progress, preview, actions */}
-          <ProgressBar progress={progress} status={status} message={error} processingMessage="Rendering text…" />
+            {/* RIGHT: Live preview */}
+            <div className="space-y-4">
+              {originalPreview && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Live Preview</label>
+                  <div className="relative inline-block rounded-xl overflow-hidden border border-gray-200 w-full">
+                    <img
+                      src={originalPreview}
+                      alt="Preview"
+                      className="block w-full"
+                      style={{ maxHeight: '500px', objectFit: 'contain' }}
+                    />
+                    {/* CSS-based text layer overlays */}
+                    {layers.map((layer) => (
+                      <div
+                        key={layer.id}
+                        className="absolute pointer-events-none"
+                        style={{
+                          left: `${layer.x}%`,
+                          top: `${layer.y}%`,
+                          transform: `translate(${layer.align === 'center' ? '-50%' : layer.align === 'right' ? '-100%' : '0'}, -50%)`,
+                          fontSize: `${Math.max(8, layer.font_size * 0.35)}px`,
+                          fontWeight: layer.bold ? 'bold' : 'normal',
+                          color: layer.color,
+                          opacity: layer.opacity,
+                          textAlign: layer.align as React.CSSProperties['textAlign'],
+                          textShadow: layer.shadow ? '2px 2px 4px rgba(0,0,0,0.7)' : layer.outline ? `-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000` : undefined,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {layer.bg_box && (
+                          <span
+                            className="absolute inset-0 rounded"
+                            style={{
+                              backgroundColor: layer.bg_box_color,
+                              opacity: layer.bg_box_opacity,
+                              padding: '2px 6px',
+                              margin: '-2px -6px',
+                              zIndex: -1,
+                            }}
+                          />
+                        )}
+                        {layer.text}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Approximate preview — final output is rendered server-side.</p>
+                </div>
+              )}
+            </div>
+          </div>
 
-          {(originalPreview || result) && status !== 'uploading' && status !== 'processing' && (
+          {/* Result after processing */}
+          {result && status === 'done' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {originalPreview && (
                 <ImagePreview src={originalPreview} alt="Original" label="Original" />
               )}
-              {result && (
-                <ImagePreview src={result.previewUrl} alt="With Text" label="With Text" />
-              )}
+              <ImagePreview src={result.previewUrl} alt="With Text" label="With Text" />
             </div>
           )}
 
@@ -388,6 +441,8 @@ export default function TextOnImagePage() {
               </div>
             </div>
           )}
+
+          <ProgressBar progress={progress} status={status} message={error} processingMessage="Rendering text…" />
 
           <div className="flex gap-3">
             <button

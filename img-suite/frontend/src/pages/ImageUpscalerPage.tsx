@@ -139,19 +139,14 @@ export default function ImageUpscalerPage() {
 
       {files.length > 0 && (
         <>
-          <div className="mt-6">
-            <ProgressBar progress={progress} status={status} message={error} processingMessage="Upscaling image…" />
-          </div>
-
-          {(originalPreview || result) && status !== 'uploading' && status !== 'processing' && (
+          {/* Previews — always visible */}
+          {originalPreview && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {originalPreview && (
-                <ImagePreview
-                  src={originalPreview}
-                  alt="Original"
-                  label={`Original${imgDimensions ? ` (${imgDimensions.w}×${imgDimensions.h})` : ''}`}
-                />
-              )}
+              <ImagePreview
+                src={originalPreview}
+                alt="Original"
+                label={`Original${imgDimensions ? ` (${imgDimensions.w}×${imgDimensions.h})` : ''}`}
+              />
               {result && (
                 <ImagePreview
                   src={result.previewUrl}
@@ -181,7 +176,11 @@ export default function ImageUpscalerPage() {
             </div>
           )}
 
-          <div className="mt-8 flex gap-3">
+          <div className="mt-6">
+            <ProgressBar progress={progress} status={status} message={error} processingMessage="Upscaling image…" />
+          </div>
+
+          <div className="mt-6 flex gap-3">
             <button
               onClick={handleUpscale}
               disabled={!files[0] || status === 'uploading' || status === 'processing'}

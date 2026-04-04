@@ -1,12 +1,15 @@
 """Image compression endpoint."""
 
 import io
+import logging
 import os
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
 from PIL import Image
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -138,6 +141,7 @@ async def compress_endpoint(
         img = Image.open(path)
         img.load()
     except Exception:
+        logger.exception("Failed to open image file")
         raise HTTPException(status_code=400, detail="Could not open image file.")
 
     buf, media_type, ext = compress_image(img, level, target_size_kb, original_ext)

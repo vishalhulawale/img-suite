@@ -8,6 +8,8 @@ from PIL import Image
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 SUPPORTED_FORMATS = {
@@ -39,6 +41,7 @@ async def convert_image(
         img = Image.open(path)
         img.load()
     except Exception:
+        logger.exception("Failed to open image file")
         raise HTTPException(status_code=400, detail="Could not open image file.")
 
     original_ext = os.path.splitext(file.filename or "")[1].lower()

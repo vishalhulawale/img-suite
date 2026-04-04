@@ -103,19 +103,6 @@ export default function FormatConverterPage() {
 
       {files.length > 0 && (
         <div className="mt-8 animate-fade-in">
-          {/* Source info */}
-          {sourceExt && (
-            <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
-              <span className="font-medium text-gray-700 uppercase bg-gray-100 px-2 py-0.5 rounded">
-                {sourceExt}
-              </span>
-              <ArrowRightLeft className="w-4 h-4" />
-              <span className="font-medium text-teal-700 uppercase bg-teal-50 px-2 py-0.5 rounded">
-                {targetFormat}
-              </span>
-            </div>
-          )}
-
           {/* Format selection */}
           <label className="block text-sm font-medium text-gray-700 mb-3">Convert to</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -154,15 +141,10 @@ export default function FormatConverterPage() {
 
       {files.length > 0 && (
         <>
-          <div className="mt-6">
-            <ProgressBar progress={progress} status={status} message={error} processingMessage="Converting image…" />
-          </div>
-
-          {(originalPreview || result) && status !== 'uploading' && status !== 'processing' && (
+          {/* Previews — always visible */}
+          {originalPreview && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {originalPreview && (
-                <ImagePreview src={originalPreview} alt="Original" label={`Original (${sourceExt.toUpperCase()})`} />
-              )}
+              <ImagePreview src={originalPreview} alt="Original" label={`Original (${sourceExt.toUpperCase()})`} />
               {result && (
                 <ImagePreview src={result.previewUrl} alt="Converted" label={`Converted (${targetFormat.toUpperCase()})`} />
               )}
@@ -191,7 +173,11 @@ export default function FormatConverterPage() {
             </div>
           )}
 
-          <div className="mt-8 flex gap-3">
+          <div className="mt-6">
+            <ProgressBar progress={progress} status={status} message={error} processingMessage="Converting image…" />
+          </div>
+
+          <div className="mt-6 flex gap-3">
             <button
               onClick={handleConvert}
               disabled={!files[0] || status === 'uploading' || status === 'processing'}

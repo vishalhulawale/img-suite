@@ -113,15 +113,10 @@ export default function AutoEnhancePage() {
 
       {files.length > 0 && (
         <>
-          <div className="mt-6">
-            <ProgressBar progress={progress} status={status} message={error} processingMessage="Enhancing image…" />
-          </div>
-
-          {(originalPreview || result) && status !== 'uploading' && status !== 'processing' && (
+          {/* Previews — always visible */}
+          {originalPreview && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {originalPreview && (
-                <ImagePreview src={originalPreview} alt="Original" label="Before" />
-              )}
+              <ImagePreview src={originalPreview} alt="Original" label="Before" />
               {result && (
                 <ImagePreview src={result.previewUrl} alt="Enhanced" label="After" />
               )}
@@ -140,7 +135,11 @@ export default function AutoEnhancePage() {
             </div>
           )}
 
-          <div className="mt-8 flex gap-3">
+          <div className="mt-6">
+            <ProgressBar progress={progress} status={status} message={error} processingMessage="Enhancing image…" />
+          </div>
+
+          <div className="mt-6 flex gap-3">
             <button
               onClick={handleEnhance}
               disabled={!files[0] || status === 'uploading' || status === 'processing'}

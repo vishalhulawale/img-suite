@@ -47,6 +47,7 @@ export default function ProfilePicturePage() {
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ mx: 0, my: 0, ox: 0, oy: 0 });
   const previewImgRef = useRef<HTMLImageElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getProfilePicPresets()
@@ -144,9 +145,16 @@ export default function ProfilePicturePage() {
 
   const handleDragEnd = useCallback(() => setDragging(false), []);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    setZoom((z) => Math.round(Math.max(1.0, Math.min(3.0, z + (e.deltaY < 0 ? 0.1 : -0.1))) * 10) / 10);
+  // Mouse wheel zoom on preview — native listener to prevent page scroll
+  useEffect(() => {
+    const el = previewContainerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      setZoom((z) => Math.round(Math.max(1.0, Math.min(3.0, z + (e.deltaY < 0 ? 0.1 : -0.1))) * 10) / 10);
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
   }, []);
 
   useEffect(() => {
@@ -259,40 +267,6 @@ export default function ProfilePicturePage() {
                   <p className="text-xs text-gray-400 mt-1">Output: {customSize}×{customSize} px</p>
                 </div>
               )}
-
-              {/* Progress & results */}
-              <ProgressBar progress={progress} status={status} message={error} processingMessage="Creating profile picture…" />
-
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCreate}
-                  disabled={!files[0] || status === 'uploading' || status === 'processing'}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg shadow-violet-500/25"
-                >
-                  <User className="w-5 h-5" />
-                  Create Profile Picture
-                </button>
-                {result && (
-                  <button
-                    onClick={() => downloadBlob(result.blob, result.filename)}
-                    className="px-6 py-3.5 bg-white text-violet-700 font-semibold rounded-xl border-2 border-violet-200 hover:bg-violet-50 transition-colors"
-                  >
-                    <Download className="w-5 h-5 inline mr-1" />
-                    Download
-                  </button>
-                )}
-              </div>
-
-              {result && status === 'done' && (
-                <div className="p-4 bg-violet-50 border border-violet-200 rounded-xl animate-fade-in">
-                  <div className="flex items-center gap-3">
-                    <User className="w-5 h-5 text-violet-600" />
-                    <span className="font-semibold text-violet-800">Profile picture ready!</span>
-                  </div>
-                  <p className="text-sm text-violet-600 mt-1">{outputSize}×{outputSize} px — optimized for {presets[platform]?.label || platform}.</p>
-                </div>
-              )}
             </div>
 
             {/* RIGHT: Interactive preview */}
@@ -306,10 +280,10 @@ export default function ProfilePicturePage() {
                     {/* Main image with overlay */}
                     <div
                       className="relative flex-1 inline-block rounded-xl overflow-hidden border border-gray-200 select-none"
+                      ref={previewContainerRef}
                       style={{ touchAction: 'none', cursor: dragging ? 'grabbing' : 'grab' }}
                       onMouseDown={handleDragStart}
                       onTouchStart={handleDragStart}
-                      onWheel={handleWheel}
                     >
                       <img
                         ref={previewImgRef}
@@ -382,6 +356,41 @@ export default function ProfilePicturePage() {
                 <ImagePreview src={result.previewUrl} alt="Profile Picture" label={presets[platform]?.label || platform} />
               )}
             </div>
+          </div>
+
+          {/* Result card, progress, and actions — full width below grid */}
+          {result && status === 'done' && (
+            <div className="mt-6 p-4 bg-violet-50 border border-violet-200 rounded-xl animate-fade-in">
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-violet-600" />
+                <span className="font-semibold text-violet-800">Profile picture ready!</span>
+              </div>
+              <p className="text-sm text-violet-600 mt-1">{outputSize}×{outputSize} px — optimized for {presets[platform]?.label || platform}.</p>
+            </div>
+          )}
+
+          <div className="mt-6">
+            <ProgressBar progress={progress} status={status} message={error} processingMessage="Creating profile picture…" />
+          </div>
+
+          <div className="mt-4 flex gap-3">
+            <button
+              onClick={handleCreate}
+              disabled={!files[0] || status === 'uploading' || status === 'processing'}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg shadow-violet-500/25"
+            >
+              <User className="w-5 h-5" />
+              Create Profile Picture
+            </button>
+            {result && (
+              <button
+                onClick={() => downloadBlob(result.blob, result.filename)}
+                className="px-6 py-3.5 bg-white text-violet-700 font-semibold rounded-xl border-2 border-violet-200 hover:bg-violet-50 transition-colors"
+              >
+                <Download className="w-5 h-5 inline mr-1" />
+                Download
+              </button>
+            )}
           </div>
         </div>
       )}

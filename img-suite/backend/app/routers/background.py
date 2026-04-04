@@ -1,12 +1,15 @@
 """Background removal endpoint using rembg (CPU, ONNX)."""
 
 import io
+import logging
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
 from PIL import Image
 from rembg import remove
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -24,6 +27,7 @@ async def remove_background(
         img = Image.open(path)
         img.load()
     except Exception:
+        logger.exception("Failed to open image file")
         raise HTTPException(status_code=400, detail="Could not open image file.")
 
     try:
@@ -40,6 +44,7 @@ async def remove_background(
         try:
             result = remove(img, post_process_mask=True)
         except Exception as e:
+            logger.exception("Background removal failed")
             raise HTTPException(status_code=500, detail=f"Background removal failed: {str(e)}")
 
     buf = io.BytesIO()

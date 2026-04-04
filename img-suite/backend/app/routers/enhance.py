@@ -8,6 +8,8 @@ from PIL import Image, ImageEnhance, ImageFilter
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # Enhancement factors per intensity level
@@ -35,6 +37,7 @@ async def enhance_image(
         img = Image.open(path)
         img.load()
     except Exception:
+        logger.exception("Failed to open image file")
         raise HTTPException(status_code=400, detail="Could not open image file.")
 
     brightness_f, contrast_f, saturation_f, sharpness_f = INTENSITY_MAP[intensity]

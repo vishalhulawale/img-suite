@@ -74,16 +74,7 @@ export default function RemoveBackgroundPage() {
 
       {files.length > 0 && (
         <>
-          <div className="mt-6">
-            <ProgressBar
-              progress={progress}
-              status={status}
-              message={error}
-              processingMessage="Removing background — this may take a moment…"
-            />
-          </div>
-
-          {/* Previews — always show original, result only when done */}
+          {/* Previews — always show original */}
           {originalPreview && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <ImagePreview src={originalPreview} alt="Original" label="Original" />
@@ -103,7 +94,16 @@ export default function RemoveBackgroundPage() {
             </div>
           )}
 
-          <div className="mt-8 flex gap-3">
+          <div className="mt-6">
+            <ProgressBar
+              progress={progress}
+              status={status}
+              message={error}
+              processingMessage="Removing background — this may take a moment…"
+            />
+          </div>
+
+          <div className="mt-6 flex gap-3">
             <button
               onClick={handleRemove}
               disabled={!files[0] || status === 'uploading' || status === 'processing'}

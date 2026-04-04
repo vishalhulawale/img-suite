@@ -33,6 +33,7 @@ export default function PassportPhotoPage() {
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ mx: 0, my: 0, ox: 0, oy: 0 });
   const previewImgRef = useRef<HTMLImageElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getPassportPresets()
@@ -139,14 +140,17 @@ export default function PassportPhotoPage() {
 
   const handleDragEnd = useCallback(() => setDragging(false), []);
 
-  // Mouse wheel zoom on preview
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+  // Mouse wheel zoom on preview — native listener to prevent page scroll
+  useEffect(() => {
+    const el = previewContainerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
       e.preventDefault();
       setZoom((z) => Math.round(Math.max(1.0, Math.min(3.0, z + (e.deltaY < 0 ? 0.1 : -0.1))) * 10) / 10);
-    },
-    [],
-  );
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
 
   useEffect(() => {
     if (dragging) {
@@ -316,35 +320,6 @@ export default function PassportPhotoPage() {
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Zoom in to crop tighter around the face. You can also scroll on the preview.</p>
               </div>
-
-              {/* Progress */}
-              <ProgressBar
-                progress={progress}
-                status={status}
-                message={error}
-                processingMessage="Creating passport photo…"
-              />
-
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCreate}
-                  disabled={!files[0] || status === 'uploading' || status === 'processing'}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-pink-600 text-white font-semibold rounded-xl hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg shadow-pink-500/25"
-                >
-                  <Camera className="w-5 h-5" />
-                  Create Passport Photo
-                </button>
-                {result && (
-                  <button
-                    onClick={() => downloadBlob(result.blob, result.filename)}
-                    className="px-6 py-3.5 bg-white text-pink-700 font-semibold rounded-xl border-2 border-pink-200 hover:bg-pink-50 transition-colors"
-                  >
-                    <Download className="w-5 h-5 inline mr-1" />
-                    Download
-                  </button>
-                )}
-              </div>
             </div>
 
             {/* RIGHT: Preview */}
@@ -356,10 +331,10 @@ export default function PassportPhotoPage() {
                   </label>
                   <div
                     className="relative inline-block rounded-xl overflow-hidden border border-gray-200 select-none"
+                    ref={previewContainerRef}
                     style={{ maxWidth: '100%', touchAction: 'none', cursor: dragging ? 'grabbing' : 'grab' }}
                     onMouseDown={handleDragStart}
                     onTouchStart={handleDragStart}
-                    onWheel={handleWheel}
                   >
                     <img
                       ref={previewImgRef}
@@ -401,20 +376,51 @@ export default function PassportPhotoPage() {
 
               {/* Result preview */}
               {result && status === 'done' && (
-                <>
-                  <ImagePreview src={result.previewUrl} alt="Passport Photo" label="Passport Photo Result" />
-                  <div className="p-4 bg-pink-50 border border-pink-200 rounded-xl animate-fade-in">
-                    <div className="flex items-center gap-3">
-                      <Camera className="w-5 h-5 text-pink-600" />
-                      <span className="font-semibold text-pink-800">Passport photo created!</span>
-                    </div>
-                    <p className="text-sm text-pink-600 mt-1">
-                      Size: {presets[selectedPreset]?.label || selectedPreset} at 300 DPI.
-                    </p>
-                  </div>
-                </>
+                <ImagePreview src={result.previewUrl} alt="Passport Photo" label="Passport Photo Result" />
               )}
             </div>
+          </div>
+
+          {/* Result card, progress, and actions — full width below grid */}
+          {result && status === 'done' && (
+            <div className="mt-6 p-4 bg-pink-50 border border-pink-200 rounded-xl animate-fade-in">
+              <div className="flex items-center gap-3">
+                <Camera className="w-5 h-5 text-pink-600" />
+                <span className="font-semibold text-pink-800">Passport photo created!</span>
+              </div>
+              <p className="text-sm text-pink-600 mt-1">
+                Size: {presets[selectedPreset]?.label || selectedPreset} at 300 DPI.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-6">
+            <ProgressBar
+              progress={progress}
+              status={status}
+              message={error}
+              processingMessage="Creating passport photo…"
+            />
+          </div>
+
+          <div className="mt-4 flex gap-3">
+            <button
+              onClick={handleCreate}
+              disabled={!files[0] || status === 'uploading' || status === 'processing'}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-pink-600 text-white font-semibold rounded-xl hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg shadow-pink-500/25"
+            >
+              <Camera className="w-5 h-5" />
+              Create Passport Photo
+            </button>
+            {result && (
+              <button
+                onClick={() => downloadBlob(result.blob, result.filename)}
+                className="px-6 py-3.5 bg-white text-pink-700 font-semibold rounded-xl border-2 border-pink-200 hover:bg-pink-50 transition-colors"
+              >
+                <Download className="w-5 h-5 inline mr-1" />
+                Download
+              </button>
+            )}
           </div>
         </div>
       )}

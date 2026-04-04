@@ -9,6 +9,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 FONT_PATHS = [
@@ -88,6 +90,7 @@ async def text_overlay(
         img = Image.open(path)
         img.load()
     except Exception:
+        logger.exception("Failed to open image file")
         raise HTTPException(status_code=400, detail="Could not open image file.")
 
     if img.mode != "RGBA":

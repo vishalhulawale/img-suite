@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Download, Droplets, Type, ImageIcon } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import ProgressBar from '../components/ProgressBar';
@@ -18,6 +18,18 @@ const POSITIONS = [
   { value: 'strip', label: 'Full-Width Strip' },
 ];
 
+function _getPositionStyle(position: string, padding: number): React.CSSProperties {
+  const pad = `${Math.max(4, padding * 0.3)}px`;
+  switch (position) {
+    case 'top-left': return { top: pad, left: pad };
+    case 'top-right': return { top: pad, right: pad };
+    case 'bottom-left': return { bottom: pad, left: pad };
+    case 'bottom-right': return { bottom: pad, right: pad };
+    case 'center': return { top: '50%', left: '50%', transform: `translate(-50%, -50%)${position === 'center' ? '' : ''}` };
+    default: return { bottom: pad, right: pad };
+  }
+}
+
 export default function WatermarkStudioPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [mode, setMode] = useState<WatermarkMode>('text');
@@ -34,6 +46,9 @@ export default function WatermarkStudioPage() {
   const [error, setError] = useState('');
   const [result, setResult] = useState<WatermarkResult | null>(null);
   const [originalPreview, setOriginalPreview] = useState<string | null>(null);
+  const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null);
+  const [wmImagePreview, setWmImagePreview] = useState<string | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const handleFilesChange = useCallback((newFiles: File[]) => {
     setFiles(newFiles);
@@ -42,11 +57,27 @@ export default function WatermarkStudioPage() {
     setStatus('idle');
     setError('');
     if (newFiles.length > 0) {
-      setOriginalPreview(URL.createObjectURL(newFiles[0]));
+      const url = URL.createObjectURL(newFiles[0]);
+      setOriginalPreview(url);
+      const img = new Image();
+      img.onload = () => setImgDims({ w: img.naturalWidth, h: img.naturalHeight });
+      img.src = url;
     } else {
       setOriginalPreview(null);
+      setImgDims(null);
     }
   }, []);
+
+  // Track watermark image preview
+  useEffect(() => {
+    if (wmFiles.length > 0) {
+      const url = URL.createObjectURL(wmFiles[0]);
+      setWmImagePreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setWmImagePreview(null);
+    }
+  }, [wmFiles]);
 
   const handleApply = async () => {
     if (!files[0]) return;
@@ -110,175 +141,262 @@ export default function WatermarkStudioPage() {
 
       {files.length > 0 && (
         <div className="mt-8 space-y-6 animate-fade-in">
-          {/* Mode toggle */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Watermark Type</label>
-            <div className="grid grid-cols-2 gap-3 max-w-sm">
-              <button
-                onClick={() => setMode('text')}
-                className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                  mode === 'text' ? 'border-rose-500 bg-rose-50' : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <Type className={`w-5 h-5 ${mode === 'text' ? 'text-rose-600' : 'text-gray-400'}`} />
-                <span className={`font-semibold text-sm ${mode === 'text' ? 'text-rose-700' : 'text-gray-700'}`}>
-                  Text
-                </span>
-              </button>
-              <button
-                onClick={() => setMode('image')}
-                className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                  mode === 'image' ? 'border-rose-500 bg-rose-50' : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <ImageIcon className={`w-5 h-5 ${mode === 'image' ? 'text-rose-600' : 'text-gray-400'}`} />
-                <span className={`font-semibold text-sm ${mode === 'image' ? 'text-rose-700' : 'text-gray-700'}`}>
-                  Image / Logo
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Text watermark settings */}
-          {mode === 'text' && (
-            <div className="space-y-4">
+          {/* Two-column: settings left, live preview right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* LEFT: Settings */}
+            <div className="space-y-6">
+              {/* Mode toggle */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Watermark Text</label>
-                <input
-                  type="text"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  maxLength={100}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
-                  placeholder="Enter watermark text…"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-3">Watermark Type</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setMode('text')}
+                    className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      mode === 'text' ? 'border-rose-500 bg-rose-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <Type className={`w-5 h-5 ${mode === 'text' ? 'text-rose-600' : 'text-gray-400'}`} />
+                    <span className={`font-semibold text-sm ${mode === 'text' ? 'text-rose-700' : 'text-gray-700'}`}>
+                      Text
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setMode('image')}
+                    className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      mode === 'image' ? 'border-rose-500 bg-rose-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <ImageIcon className={`w-5 h-5 ${mode === 'image' ? 'text-rose-600' : 'text-gray-400'}`} />
+                    <span className={`font-semibold text-sm ${mode === 'image' ? 'text-rose-700' : 'text-gray-700'}`}>
+                      Image / Logo
+                    </span>
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              {/* Text watermark settings */}
+              {mode === 'text' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Watermark Text</label>
+                    <input
+                      type="text"
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      maxLength={100}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
+                      placeholder="Enter watermark text…"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Font Size: {fontSize}px</label>
+                      <input
+                        type="range"
+                        min="12"
+                        max="120"
+                        value={fontSize}
+                        onChange={(e) => setFontSize(parseInt(e.target.value))}
+                        className="w-full accent-rose-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={color}
+                          onChange={(e) => setColor(e.target.value)}
+                          className="w-10 h-10 rounded-lg cursor-pointer border border-gray-200"
+                        />
+                        <span className="text-sm text-gray-500">{color}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Image watermark upload */}
+              {mode === 'image' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Watermark Image / Logo</label>
+                    <FileDropzone
+                      files={wmFiles}
+                      onFilesChange={setWmFiles}
+                      multiple={false}
+                      label="Drop your logo or watermark image"
+                      description="PNG with transparency works best"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Size: {fontSize}%</label>
+                    <input
+                      type="range"
+                      min="5"
+                      max="80"
+                      value={fontSize}
+                      onChange={(e) => setFontSize(parseInt(e.target.value))}
+                      className="w-full accent-rose-500"
+                    />
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>Small</span>
+                      <span>Large</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Position */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Position</label>
+                <div className="flex flex-wrap gap-2">
+                  {POSITIONS.map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => setPosition(p.value)}
+                      className={`px-3 py-2 rounded-xl border-2 text-sm transition-all ${
+                        position === p.value
+                          ? 'border-rose-500 bg-rose-50 text-rose-700 font-semibold'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sliders */}
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Font Size: {fontSize}px</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Opacity: {opacity}%</label>
                   <input
                     type="range"
-                    min="12"
-                    max="120"
-                    value={fontSize}
-                    onChange={(e) => setFontSize(parseInt(e.target.value))}
+                    min="5"
+                    max="100"
+                    value={opacity}
+                    onChange={(e) => setOpacity(parseInt(e.target.value))}
                     className="w-full accent-rose-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={color}
-                      onChange={(e) => setColor(e.target.value)}
-                      className="w-10 h-10 rounded-lg cursor-pointer border border-gray-200"
-                    />
-                    <span className="text-sm text-gray-500">{color}</span>
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Rotation: {rotation}°</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    value={rotation}
+                    onChange={(e) => setRotation(parseInt(e.target.value))}
+                    className="w-full accent-rose-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Padding: {padding}px</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={padding}
+                    onChange={(e) => setPadding(parseInt(e.target.value))}
+                    className="w-full accent-rose-500"
+                  />
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Image watermark upload */}
-          {mode === 'image' && (
+            {/* RIGHT: Live preview */}
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Watermark Image / Logo</label>
-                <FileDropzone
-                  files={wmFiles}
-                  onFilesChange={setWmFiles}
-                  multiple={false}
-                  label="Drop your logo or watermark image"
-                  description="PNG with transparency works best"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Size: {fontSize}%</label>
-                <input
-                  type="range"
-                  min="5"
-                  max="80"
-                  value={fontSize}
-                  onChange={(e) => setFontSize(parseInt(e.target.value))}
-                  className="w-full accent-rose-500"
-                />
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>Small</span>
-                  <span>Large</span>
+              {originalPreview && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Live Preview</label>
+                  <div ref={previewRef} className="relative inline-block rounded-xl overflow-hidden border border-gray-200 w-full">
+                    <img
+                      src={originalPreview}
+                      alt="Preview"
+                      className="block w-full"
+                      style={{ maxHeight: '500px', objectFit: 'contain' }}
+                    />
+                    {/* CSS-based watermark overlay */}
+                    {mode === 'text' && text && position !== 'repeated' && position !== 'strip' && (
+                      <div
+                        className="absolute pointer-events-none whitespace-nowrap"
+                        style={{
+                          ..._getPositionStyle(position, padding),
+                          fontSize: `${Math.max(8, fontSize * 0.4)}px`,
+                          color: color,
+                          opacity: opacity / 100,
+                          transform: rotation ? `rotate(${rotation}deg)` : undefined,
+                          textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {text}
+                      </div>
+                    )}
+                    {mode === 'text' && text && position === 'repeated' && (
+                      <div
+                        className="absolute inset-0 pointer-events-none overflow-hidden flex flex-wrap content-start gap-8 p-4"
+                        style={{ opacity: opacity / 100 }}
+                      >
+                        {Array.from({ length: 20 }).map((_, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              fontSize: `${Math.max(8, fontSize * 0.35)}px`,
+                              color: color,
+                              transform: rotation ? `rotate(${rotation}deg)` : undefined,
+                              textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            {text}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {mode === 'text' && text && position === 'strip' && (
+                      <div
+                        className="absolute left-0 right-0 bottom-0 pointer-events-none text-center py-2"
+                        style={{
+                          fontSize: `${Math.max(8, fontSize * 0.4)}px`,
+                          color: color,
+                          opacity: opacity / 100,
+                          backgroundColor: 'rgba(0,0,0,0.3)',
+                          textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {text}
+                      </div>
+                    )}
+                    {mode === 'image' && wmImagePreview && position !== 'repeated' && (
+                      <div
+                        className="absolute pointer-events-none"
+                        style={{
+                          ..._getPositionStyle(position, padding),
+                          opacity: opacity / 100,
+                          transform: rotation ? `rotate(${rotation}deg)` : undefined,
+                          width: `${fontSize}%`,
+                        }}
+                      >
+                        <img src={wmImagePreview} alt="Watermark" className="w-full h-auto" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Approximate preview — final output is rendered server-side.</p>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Shared settings */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Position</label>
-            <div className="flex flex-wrap gap-2">
-              {POSITIONS.map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => setPosition(p.value)}
-                  className={`px-3 py-2 rounded-xl border-2 text-sm transition-all ${
-                    position === p.value
-                      ? 'border-rose-500 bg-rose-50 text-rose-700 font-semibold'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Opacity: {opacity}%</label>
-              <input
-                type="range"
-                min="5"
-                max="100"
-                value={opacity}
-                onChange={(e) => setOpacity(parseInt(e.target.value))}
-                className="w-full accent-rose-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rotation: {rotation}°</label>
-              <input
-                type="range"
-                min="0"
-                max="360"
-                value={rotation}
-                onChange={(e) => setRotation(parseInt(e.target.value))}
-                className="w-full accent-rose-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Padding: {padding}px</label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={padding}
-                onChange={(e) => setPadding(parseInt(e.target.value))}
-                className="w-full accent-rose-500"
-              />
-            </div>
-          </div>
-
-          {/* Progress & preview */}
-          <ProgressBar progress={progress} status={status} message={error} processingMessage="Applying watermark…" />
-
-          {(originalPreview || result) && status !== 'uploading' && status !== 'processing' && (
+          {/* Result after processing */}
+          {result && status === 'done' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {originalPreview && (
                 <ImagePreview src={originalPreview} alt="Original" label="Original" />
               )}
-              {result && (
-                <ImagePreview src={result.previewUrl} alt="Watermarked" label="Watermarked" />
-              )}
+              <ImagePreview src={result.previewUrl} alt="Watermarked" label="Watermarked" />
             </div>
           )}
 
@@ -290,6 +408,8 @@ export default function WatermarkStudioPage() {
               </div>
             </div>
           )}
+
+          <ProgressBar progress={progress} status={status} message={error} processingMessage="Applying watermark…" />
 
           <div className="flex gap-3">
             <button

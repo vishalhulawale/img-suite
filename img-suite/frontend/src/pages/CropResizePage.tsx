@@ -411,9 +411,6 @@ export default function CropResizePage() {
             </p>
           </div>
 
-          {/* Progress */}
-          <ProgressBar progress={progress} status={status} message={error} processingMessage="Cropping…" />
-
           {/* Result preview */}
           {result && status === 'done' && (
             <>
@@ -439,6 +436,8 @@ export default function CropResizePage() {
               </div>
             </>
           )}
+
+          <ProgressBar progress={progress} status={status} message={error} processingMessage="Cropping…" />
 
           <div className="flex gap-3">
             <button

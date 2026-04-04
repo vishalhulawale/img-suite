@@ -9,6 +9,8 @@ from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
 from app.utils import save_upload, cleanup_files, ALLOWED_IMAGE_MIME
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # Try common font paths
@@ -65,6 +67,7 @@ async def apply_watermark(
         img = Image.open(path)
         img.load()
     except Exception:
+        logger.exception("Failed to open image file")
         raise HTTPException(status_code=400, detail="Could not open image file.")
 
     if img.mode != "RGBA":
@@ -81,6 +84,7 @@ async def apply_watermark(
             wm = Image.open(wm_path)
             wm.load()
         except Exception:
+            logger.exception("Failed to open watermark image")
             raise HTTPException(status_code=400, detail="Could not open watermark image.")
 
         if wm.mode != "RGBA":

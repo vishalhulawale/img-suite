@@ -140,16 +140,10 @@ export default function CompressPage() {
 
       {files.length > 0 && (
         <>
-          <div className="mt-6">
-            <ProgressBar progress={progress} status={status} message={error} processingMessage="Compressing image…" />
-          </div>
-
-          {/* Previews */}
-          {(originalPreview || result) && status !== 'uploading' && status !== 'processing' && (
+          {/* Previews — always visible once an image is loaded */}
+          {originalPreview && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {originalPreview && (
-                <ImagePreview src={originalPreview} alt="Original" label="Original" />
-              )}
+              <ImagePreview src={originalPreview} alt="Original" label="Original" />
               {result && (
                 <ImagePreview src={result.previewUrl} alt="Compressed" label="Compressed" />
               )}
@@ -167,7 +161,7 @@ export default function CompressPage() {
               </div>
               {result.skipped ? (
                 <p className="text-sm text-amber-700">
-                  Compressing this image would increase its file size ({formatSize(result.originalSize)}), so the original was returned unchanged.
+                  This image is already optimized and cannot be compressed further. The original image was returned unchanged.
                 </p>
               ) : (
                 <div className="grid grid-cols-3 gap-4 text-center">
@@ -188,7 +182,11 @@ export default function CompressPage() {
             </div>
           )}
 
-          <div className="mt-8 flex gap-3">
+          <div className="mt-6">
+            <ProgressBar progress={progress} status={status} message={error} processingMessage="Compressing image…" />
+          </div>
+
+          <div className="mt-6 flex gap-3">
             <button
               onClick={handleCompress}
               disabled={!files[0] || status === 'uploading' || status === 'processing'}
